@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 # lfmc-backend
+=======
+# lfmc-api
+>>>>>>> master
 
 ## README
 
@@ -11,7 +15,14 @@ Processes, Models and TS Data are all exposed through as RESTful API.
 Hug is used for API development and Hug also naturally exposes a WSGI-Compatible API ready for production use.
 
 ### Building the Docker Image
+<<<<<<< HEAD
     $ docker build . --tag anthonyrawlinsuom/lfmc-backend
 
 ### Running the Docker Image
     $ docker run -it -p 8002:8002 anthonyrawlinsuom/lfmc-backend /bin/bash -exec 'hug -f LFMCServer.py'
+=======
+    $ docker build . --tag anthonyrawlinsuom/lfmc-api
+
+### Running the Docker Image
+    $ docker run -it -p 8002:8002 anthonyrawlinsuom/lfmc-api /bin/bash -exec 'hug -f LFMCServer.py'
+>>>>>>> master
