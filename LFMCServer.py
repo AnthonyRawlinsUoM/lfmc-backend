@@ -211,9 +211,7 @@ async def fuel_json(geo_json,
     if models is None:
         return {'ModelError': 'No suitable model found for: ' + models}
     elif len(models) > 1:
-        logger.debug(
-            "LFMC API Server got Multiple model request. This shouldn't happen!")
-        return None
+        raise ValueError("LFMC API Server got Multiple model request. This shouldn't happen!")
     else:
         model = models[0]
         mr = ModelRegister()
@@ -362,7 +360,6 @@ async def get_converted_shapefile(shp: str):
 
 if __name__ == '__main__':
     get_hostname.interface.cli()
-    get_log.interface.cli()
     fuel_json.interface.cli()
     fuel_mp4.interface.cli()
     fuel_nc.interface.cli()
