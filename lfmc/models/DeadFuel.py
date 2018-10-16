@@ -19,7 +19,9 @@ from lfmc.results.DataPoint import DataPoint
 from lfmc.results.MPEGFormatter import MPEGFormatter
 from lfmc.results.ModelResult import ModelResult
 from lfmc.query.ShapeQuery import ShapeQuery
+from lfmc.query.GeoQuery import GeoQuery
 from lfmc.query.SpatioTemporalQuery import SpatioTemporalQuery
+
 
 import matplotlib.pyplot as plt
 import logging
@@ -178,7 +180,7 @@ class DeadFuelModel(Model):
                 return None
 
     async def mpg(self, query: ShapeQuery):
-        sr, weights = await (self.get_shaped_resultcube(query))
+        sr = await (self.get_shaped_resultcube(query))
         logger.debug(sr)
         mp4 = await (MPEGFormatter.format(
             sr, self.outputs["readings"]["prefix"]))
@@ -186,7 +188,7 @@ class DeadFuelModel(Model):
         return mp4
 
     async def get_netcdf(self, query: ShapeQuery):
-        sr, weights = await (self.get_shaped_resultcube(query))
+        sr = await (self.get_shaped_resultcube(query))
         return sr
 
     # ShapeQuery
@@ -202,59 +204,59 @@ class DeadFuelModel(Model):
             sr = sr.sel(time=slice(shape_query.temporal.start.strftime("%Y-%m-%d"),
                                    shape_query.temporal.finish.strftime("%Y-%m-%d")))
 
-            return shape_query.apply_mask_to(sr)
+            return sr
         else:
             logger.debug("No files available/gathered for that space/time.")
             return xr.DataArray([])
 
-    async def get_resultcube(self, query: SpatioTemporalQuery) -> xr.DataArray:
-        """
-        Does not guarantee a raster stack result.
-        Quite possibly a jaggy edge.
-        Essentially a subset of points only.
-        """
+    # async def get_resultcube(self, query: SpatioTemporalQuery) -> xr.DataArray:
+    #     """
+    #     Does not guarantee a raster stack result.
+    #     Quite possibly a jaggy edge.
+    #     Essentially a subset of points only.
+    #     """
+    #
+    #     sr = None
+    #     fs = await asyncio.gather(*[self.dataset_files(when) for when in query.temporal.dates()])
+    #     asyncio.sleep(1)
+    #     if len(fs) > 0:
+    #         with xr.open_mfdataset(fs) as ds:
+    #             if "observations" in ds.dims:
+    #                 ds = ds.squeeze("observations")
+    #
+    #             # expand coverage to tolerance
+    #             # ensures single point returns at least 1 cell
+    #             # also ensures ds slicing will work correctly
+    #             lat1, lon1, lat2, lon2 = query.spatial.expanded(
+    #                 0.05)  # <-- TODO - Remove magic number and get spatial pixel resolution from metadata
+    #
+    #             # restrict coverage to extents of ds
+    #             lat1 = max(lat1, ds["latitude"].min())
+    #             lon1 = max(lon1, ds["longitude"].min())
+    #             lat2 = min(lat2, ds["latitude"].max())
+    #             lon2 = min(lon2, ds["longitude"].max())
+    #
+    #             sr = ds.sel(latitude=slice(lat1, lat2),
+    #                         longitude=slice(lon1, lon2))
+    #             sr.load()
+    #
+    #     return sr
 
-        sr = None
-        fs = await asyncio.gather(*[self.dataset_files(when) for when in query.temporal.dates()])
-        asyncio.sleep(1)
-        if len(fs) > 0:
-            with xr.open_mfdataset(fs) as ds:
-                if "observations" in ds.dims:
-                    ds = ds.squeeze("observations")
-
-                # expand coverage to tolerance
-                # ensures single point returns at least 1 cell
-                # also ensures ds slicing will work correctly
-                lat1, lon1, lat2, lon2 = query.spatial.expanded(
-                    0.05)  # <-- TODO - Remove magic number and get spatial pixel resolution from metadata
-
-                # restrict coverage to extents of ds
-                lat1 = max(lat1, ds["latitude"].min())
-                lon1 = max(lon1, ds["longitude"].min())
-                lat2 = min(lat2, ds["latitude"].max())
-                lon2 = min(lon2, ds["longitude"].max())
-
-                sr = ds.sel(latitude=slice(lat1, lat2),
-                            longitude=slice(lon1, lon2))
-                sr.load()
-
-        return sr
-
-    async def get_timeseries(self, query: SpatioTemporalQuery) -> ModelResult:
-        """
-        Essentially just time slicing the resultcube.
-        DataPoint actually handles the creation of values from stats.
-        :param query:
-        :return:
-        """
-        logger.debug(
-            "--->>> SpatioTemporal Query Called on %s Model!! <<<---" % self.name)
-        sr = await (self.get_resultcube(query))
-        sr.load()
-        asyncio.sleep(1)
-        dps = [self.get_datapoint_for_param(b=sr.isel(time=t), param="DFMC")
-               for t in range(0, len(sr["time"]))]
-        return ModelResult(model_name=self.name, data_points=dps)
+    # async def get_timeseries(self, query: SpatioTemporalQuery) -> ModelResult:
+    #     """
+    #     Essentially just time slicing the resultcube.
+    #     DataPoint actually handles the creation of values from stats.
+    #     :param query:
+    #     :return:
+    #     """
+    #     logger.debug(
+    #         "--->>> SpatioTemporal Query Called on %s Model!! <<<---" % self.name)
+    #     sr = await (self.get_resultcube(query))
+    #     sr.load()
+    #     asyncio.sleep(1)
+    #     dps = [self.get_datapoint_for_param(b=sr.isel(time=t), param="DFMC")
+    #            for t in range(0, len(sr["time"]))]
+    #     return ModelResult(model_name=self.name, data_points=dps)
 
     @staticmethod
     def do_conversion(file_name, param, when):
@@ -426,32 +428,17 @@ class DeadFuelModel(Model):
     async def get_shaped_timeseries(self, query: ShapeQuery) -> ModelResult:
         logger.debug(
             "\n--->>> Shape Query Called successfully on %s Model!! <<<---" % self.name)
-        sr, weights = await (self.get_shaped_resultcube(query))
+        sr = await (self.get_shaped_resultcube(query))
         sr.load()
         var = self.outputs['readings']['prefix']
         dps = []
         try:
             logger.debug('Trying to find datapoints.')
 
-            for t in sorted(sr['time'].values):
+            geoQ = GeoQuery(query)
+            dps = geoQ.cast_fishnet({'init': 'EPSG:4326'}, sr[var])
+            logger.debug(dps)
 
-                d = sr[var].sel(time=t).to_dataframe()
-                df = d[var]
-
-                # cleaned_mask = np.ma.masked_array(weights, np.isnan(weights))
-                # cleaned = np.ma.masked_array(df, np.isnan(df))
-
-                #wm = np.ma.average(cleaned, axis=1, weights=cleaned_mask)
-                wm = -99999
-
-                dps.append(DataPoint(observation_time=str(t).replace('.000000000', '.000Z'),
-                                     value=np.nanmedian(df),
-                                     mean=np.nanmean(df),
-                                     weighted_mean=wm,
-                                     minimum=np.nanmin(df),
-                                     maximum=np.nanmax(df),
-                                     deviation=np.nanstd(df),
-                                     count=df.count()))
         except FileNotFoundError:
             logger.debug('Files not found for date range.')
         except ValueError as ve:
@@ -462,7 +449,6 @@ class DeadFuelModel(Model):
         if len(dps) == 0:
             logger.debug('Found no datapoints.')
             logger.debug(sr)
-            logger.debug(weights)
 
         asyncio.sleep(1)
 

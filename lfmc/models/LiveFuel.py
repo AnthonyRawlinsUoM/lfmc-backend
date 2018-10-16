@@ -12,6 +12,7 @@ import xarray as xr
 import datetime as dt
 import json
 import urllib
+import ogr
 import osr
 
 
@@ -19,14 +20,19 @@ from pathlib2 import Path
 import lfmc.config.debug as dev
 from lfmc.models.Model import Model
 from lfmc.models.ModelMetaData import ModelMetaData
-from lfmc.models.dummy_results import DummyResults
-from lfmc.query import ShapeQuery
+from lfmc.query.ShapeQuery import ShapeQuery
+from lfmc.query.GeoQuery import GeoQuery
 from lfmc.query.SpatioTemporalQuery import SpatioTemporalQuery
 from lfmc.resource.SwiftStorage import SwiftStorage
 from lfmc.results.Abstracts import Abstracts
 from lfmc.results.Author import Author
 from lfmc.results.DataPoint import DataPoint
 from lfmc.results.ModelResult import ModelResult
+import logging
+logging.basicConfig()
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+logger.debug("logger set to DEBUG")
 
 
 class LiveFuelModel(Model):
@@ -95,14 +101,14 @@ class LiveFuelModel(Model):
         self.outputs = {
             "type": "fuel moisture",
             "readings": {
-                "path": "LiveFM",
+                "path": "LFMC",
                 "url": "LiveFM",
                 "prefix": "LFMC",
-                "suffix": "_lfmc.nc",
+                "suffix": ".nc",
             }
         }
 
-        self.storage_engine = SwiftStorage()
+        # self.storage_engine = SwiftStorage()
         # {"parameters": self.parameters, "outputs": self.outputs})
 
     # @deprecated
@@ -135,12 +141,13 @@ class LiveFuelModel(Model):
         return [(h, v) for h in range(27, 31) for v in range(9, 13)]
 
     def is_acceptable_granule(self, granule):
-        return self.hv_for_modis_granule(granule) in LiveFuelModel.used_granules()
+        return self.get_hv(granule) in LiveFuelModel.used_granules()
 
     @staticmethod
     def hv_for_modis_granule(granule):
         """ Extracts HV grid coords from naming conventions of HDF-EOS file.
         Assumes input is a file name string conforming to EOS naming conventions."""
+
         parts = granule.split('.')
         hv_component = parts[2].split('v')
         h = int(hv_component[0].replace('h', ''))
@@ -151,7 +158,6 @@ class LiveFuelModel(Model):
         """ Extracts the observation date from the naming conventions of a HDF-EOS file"""
         # unravel naming conventions
         parts = granule.split('.')
-
         # set the key for subgrouping to be the date of observation by parsing the Julian Date
         return dt.datetime.strptime((parts[1].replace('A', '')), '%Y%j')
 
@@ -162,105 +168,137 @@ class LiveFuelModel(Model):
 
     async def retrieve_earth_observation_data(self, url):
         """ Please note: Requires a valid .netrc file in users home directory! """
-        os.chdir(self.path)
-        print(url)
+
+        # logger.debug(url)
         file_name = url.split('/')[-1]
-        print(file_name)
-
         xml_name = file_name + '.xml'
-        hdf5_name = file_name + '_lfmc.nc'
 
-        hdf_file = Path(file_name)
-        xml_file = Path(xml_name)
-        hdf5_name = Path(hdf5_name)
+        # LFMC Product as granules
+        livefuel_name = self.fuel_name(file_name)
+        livefuel_file = Path(
+            self.outputs['readings']['path'] + "/" + livefuel_name)
 
-        if not self.storage_engine.swift_check_lfmc(hdf5_name):
-            # No LFMC Product for this granule
-            if not self.storage_engine.swift_check_modis(file_name):
-                # No Granule held in cloud
-                if (not hdf_file.is_file()) or (os.path.getsize(hdf_file) == 0):
-                    # No local file either!
-                    print("[Downloading]" + file_name)
-                    # cmdline("curl -n -L -c cookiefile -b cookiefile %s --output %s" % (url, file_name))
-                    os.system(
-                        "wget -L --accept hdf --reject html --load-cookies=cookiefile --save-cookies=cookiefile %s -O %s" % (
-                            url, file_name))
-                    asyncio.sleep(1)
+        # MODIS source granules
+        hdf_file = Path(self.path + "/modis/" + file_name)
+        xml_file = Path(self.path + "/modis/" + xml_name)
+        os.chdir(self.path)
+        if (livefuel_file.is_file()):
+            logger.debug("Have: %s", livefuel_name)
+            return livefuel_name
 
-                if hdf_file.is_file():
-                    # Local file now exists
-                    # TODO -> Process the file and calc the Live FM here!
-                    xlfmc = self.convert_modis_granule_file_to_lfmc(hdf_file)
-                    # Upload the LFMC HDF5 file to swift API as well.
-                    self.storage_engine.swift_put_lfmc()
-                    # else:
-                    #     raise CalculationError('Processing LFMC for Granule: %s failed!' % (hdf_file))
-
-                    # Make sure to save the original source
-                    if self.storage_engine.swift_put_modis(file_name):
-                        os.remove(file_name)
-            else:
-                # MODIS Source exists but derived LFMC HDF5 does not!
-                self.storage_engine.swift_get_modis(file_name)
-
-                # TODO -> Process the file and calc the Live FM here!\
-                with self.convert_modis_granule_file_to_lfmc(hdf_file) as xlfmc:
-                    # Upload the LFMC HDF5 file to swift API as well.
-                    self.storage_engine.swift_put_lfmc(xlfmc)
-
-                # else:
-                #     raise CalculationError('Processing LFMC for Granule: %s failed!' % (hdf_file))
-
-            print("[OK] %s" % (file_name))
-
-            if not self.storage_engine.swift_check_modis(xml_name):
-                if (not xml_file.is_file()) or (os.path.getsize(xml_file) == 0):
-                    print("[Downloading] " + xml_name)
-                    os.system(
-                        "wget -L --accept xml --reject html --load-cookies=cookiefile --save-cookies=cookiefile %s -O %s" % (
-                            url, xml_name))
-                    # cmdline("curl -n -L -c cookiefile -b cookiefile %s --output %s" % (url+'.xml', xml_name))
-                if xml_file.is_file():
-                    if self.storage_engine.swift_put_modis(xml_name):
-                        os.remove(xml_name)
-            print("[OK] %s" % (xml_name))
-
+        elif (not hdf_file.is_file()) or (os.path.getsize(hdf_file) == 0):
+            # No local file either!
+            logger.debug("[Downloading] %s" % file_name)
+            # cmdline("curl -n -L -c cookiefile -b cookiefile %s --output %s" % (url, file_name))
+            os.chdir('./modis')
+            os.system(
+                "wget -L --accept hdf --reject html --load-cookies=cookiefile --save-cookies=cookiefile %s -O %s" % (
+                    url, file_name))
+            os.chdir('..')
+            asyncio.sleep(1)
+            await self.convert_modis_granule_file_to_lfmc(str(hdf_file))
+        elif hdf_file.is_file():
+            # Local file now exists
+            logger.debug('Converting MODIS to Fuel Granule...')
+            # TODO -> Process the file and calc the Live FM here!
+            await self.convert_modis_granule_file_to_lfmc(str(hdf_file))
         else:
-            # LFMC exists for this granule in Nectar Cloud already!
-            print('LFMC exists for this granule in Nectar Cloud already!')
+            logger.debug('No HDF file!')
+
+        # if not self.storage_engine.swift_check_lfmc(hdf5_name):
+        #     logger.debug('Fuel Granule Not in Swift Storage...')
+        #     # No LFMC Product for this granule
+        #     if not self.storage_engine.swift_check_modis(file_name):
+        #         logger.debug('MODIS Granule Not in Swift Storage...')
+            # No Granule held in cloud
+        #         if (not hdf_file.is_file()) or (os.path.getsize(hdf_file) == 0):
+        #             # No local file either!
+        #             logger.debug("[Downloading]" + file_name)
+        #             # cmdline("curl -n -L -c cookiefile -b cookiefile %s --output %s" % (url, file_name))
+        #             os.system(
+        #                 "wget -L --accept hdf --reject html --load-cookies=cookiefile --save-cookies=cookiefile %s -O %s" % (
+        #                     url, file_name))
+        #             asyncio.sleep(1)
+        #
+        #         if hdf_file.is_file():
+        #             # Local file now exists
+        #             logger.debug('Converting MODIS to Fuel Granule...')
+        #             # TODO -> Process the file and calc the Live FM here!
+        #             xlfmc = self.convert_modis_granule_file_to_lfmc(hdf_file)
+        #             # Upload the LFMC HDF5 file to swift API as well.
+        #             logger.debug('Storing Fuel Granule in Swift...')
+        #             self.storage_engine.swift_put_lfmc()
+        #             # else:
+        #             #     raise CalculationError('Processing LFMC for Granule: %s failed!' % (hdf_file))
+        #
+        #             # Make sure to save the original source
+        #             if self.storage_engine.swift_put_modis(file_name):
+        #                 os.remove(file_name)
+        #     else:
+        #         # MODIS Source exists but derived LFMC HDF5 does not!
+        #         self.storage_engine.swift_get_modis(file_name)
+        #
+        #         # TODO -> Process the file and calc the Live FM here!\
+        #         with self.convert_modis_granule_file_to_lfmc(hdf_file) as xlfmc:
+        #             # Upload the LFMC HDF5 file to swift API as well.
+        #             self.storage_engine.swift_put_lfmc(xlfmc)
+        #
+        #         # else:
+        #         #     raise CalculationError('Processing LFMC for Granule: %s failed!' % (hdf_file))
+        #
+        #     logger.debug("[OK] %s" % (file_name))
+        #
+        #     if not self.storage_engine.swift_check_modis(xml_name):
+        #         if (not xml_file.is_file()) or (os.path.getsize(xml_file) == 0):
+        #             logger.debug("[Downloading] " + xml_name)
+        #             os.system(
+        #                 "wget -L --accept xml --reject html --load-cookies=cookiefile --save-cookies=cookiefile %s -O %s" % (
+        #                     url, xml_name))
+        #             # cmdline("curl -n -L -c cookiefile -b cookiefile %s --output %s" % (url+'.xml', xml_name))
+        #         if xml_file.is_file():
+        #             if self.storage_engine.swift_put_modis(xml_name):
+        #                 os.remove(xml_name)
+        #     logger.debug("[OK] %s" % (xml_name))
+        #
+        # else:
+        #     # LFMC exists for this granule in Nectar Cloud already!
+        #     logger.debug(
+        #         'LFMC exists for this granule in Nectar Cloud already!')
 
         asyncio.sleep(1)
-        return hdf_file
+        if Path(livefuel_name).is_file():
+            logger.debug('Validated %s' % livefuel_name)
+        return livefuel_name
 
-    def group_queue_by_date(self, queue):
-        grouped = {}
-
-        print('#### Deconstructing: %s', [e for e in queue])
-
-        # Sort the queue and group by date/granule HV coords
-        for elem in queue:
-            if type(elem) is list:
-                print(
-                    '#### Expected list of strings, got list of lists')
-                for e in elem:
-                    fname = e.split('/')[-1]
-                    if fname.endswith('.hdf') or fname.endswith('.HDF'):
-                        key = self.date_for_modis_granule(
-                            fname).strftime('%Y-%m-%d')
-                        grouped.setdefault(key, []).append(e)
-            else:
-                fname = elem.split('/')[-1]
-                if fname.endswith('.hdf') or fname.endswith('.HDF'):
-                    key = self.date_for_modis_granule(
-                        fname).strftime('%Y-%m-%d')
-                    grouped.setdefault(key, []).append(elem)
-
-        return grouped
+    # def group_queue_by_date(self, queue):
+    #     grouped = {}
+    #
+    #     logger.debug('#### Deconstructing: %s', [e for e in queue])
+    #
+    #     # Sort the queue and group by date/granule HV coords
+    #     for elem in queue:
+    #         if type(elem) is list:
+    #             logger.debug(
+    #                 '#### Expected list of strings, got list of lists')
+    #             for e in elem:
+    #                 fname = e.split('/')[-1]
+    #                 if fname.endswith('.hdf') or fname.endswith('.HDF'):
+    #                     key = self.date_for_modis_granule(
+    #                         fname).strftime('%Y-%m-%d')
+    #                     grouped.setdefault(key, []).append(e)
+    #         else:
+    #             fname = elem.split('/')[-1]
+    #             if fname.endswith('.hdf') or fname.endswith('.HDF'):
+    #                 key = self.date_for_modis_granule(
+    #                     fname).strftime('%Y-%m-%d')
+    #                 grouped.setdefault(key, []).append(elem)
+    #
+    #     return grouped
         # return queue
 
-    def read_hdfeos_df_as_xarray(self, file_name, data_field_name):
+    async def read_hdfeos_df_as_xarray(self, file_name, data_field_name):
 
-        print(file_name)
+        logger.debug('Called Read hdfeos df file_name on: %s' % file_name)
 
         grid_name = 'MOD_Grid_500m_Surface_Reflectance'
         gname = 'HDF4_EOS:EOS_GRID:"{0}":{1}:{2}'.format(file_name,
@@ -276,15 +314,16 @@ class LiveFuelModel(Model):
         geoprojection = gdset.GetProjection()
 
         band = dataset.GetRasterBand(1)
-        print("Driver: {}/{}".format(dataset.GetDriver().ShortName,
-                                     dataset.GetDriver().LongName))
-        print("Size is {} x {} x {}".format(dataset.RasterXSize,
-                                            dataset.RasterYSize,
-                                            dataset.RasterCount))
-        if geotransform:
-            print("Origin = ({}, {})".format(geotransform[0], geotransform[3]))
-            print("Pixel Size = ({}, {})".format(
-                geotransform[1], geotransform[5]))
+        # logger.debug("Driver: {}/{}".format(dataset.GetDriver().ShortName,
+        #                                     dataset.GetDriver().LongName))
+        # logger.debug("Size is {} x {} x {}".format(dataset.RasterXSize,
+        #                                            dataset.RasterYSize,
+        #                                            dataset.RasterCount))
+        # if geotransform:
+        # logger.debug("Origin = ({}, {})".format(
+        #     geotransform[0], geotransform[3]))
+        # logger.debug("Pixel Size = ({}, {})".format(
+        #     geotransform[1], geotransform[5]))
 
         inSRS_converter = osr.SpatialReference()  # makes an empty spatial ref object
         # populates the spatial ref object with our WKT SRS
@@ -292,18 +331,12 @@ class LiveFuelModel(Model):
         # Exports an SRS ref as a Proj4 string usable by PyProj
         inSRS_forPyProj = inSRS_converter.ExportToProj4()
 
-        print(inSRS_forPyProj)
+        # logger.debug(inSRS_forPyProj)
 
         fmttypes = {'Byte': 'B', 'UInt16': 'H', 'Int16': 'h', 'UInt32': 'I',
                     'Int32': 'i', 'Float32': 'f', 'Float64': 'd'}
 
-        print("rows = %d columns = %d" % (band.YSize, band.XSize))
-
         BandType = gdal.GetDataTypeName(band.DataType)
-
-        print("Data type = ", BandType)
-
-        print("Executing with %s" % file_name)
 
         data = band.ReadAsArray()
         x0, xinc, _, y0, _, yinc = geotransform
@@ -313,10 +346,15 @@ class LiveFuelModel(Model):
         xv, yv = np.meshgrid(x, y)
 
         # Convert the grid back to lat/lons.
+        sinu = pyproj.Proj(
+            "+proj=sinu +lon_0=0 +x_0=0 +y_0=0 +a=6371007.181 +b=6371007.181 +units=m +no_defs ")
+
         merc = pyproj.Proj(
             "+proj=merc +lon_0=0 +k=1 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs ")
+
         wgs84 = pyproj.Proj("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs")
-        lon, lat = pyproj.transform(merc, wgs84, xv, yv)
+
+        lon, lat = pyproj.transform(sinu, wgs84, xv, yv)
 
         # Read the attributes.
         meta = gdset.GetMetadata()
@@ -340,7 +378,7 @@ class LiveFuelModel(Model):
 
         return ds['band']
 
-    def convert_modis_granules_file_to_lfmc(self, fobjs):
+    async def convert_modis_granule_file_to_lfmc(self, fobj):
         """
         This method combines the bands to form the LFMC values IN THE GRANULE and adds the data to existing bands,
         along with appropriate metadata.
@@ -349,53 +387,60 @@ class LiveFuelModel(Model):
         :param fobjs:
         :return: An Xarray Dataset (in-memory)
         """
+        logger.debug('Got call to convert: %s' % fobj)
 
-        for fobj in fobjs:
-            b1 = self.read_hdfeos_df_as_xarray(fobj, 0)  # sur_refl_b01
-            b3 = self.read_hdfeos_df_as_xarray(fobj, 2)  # sur_refl_b03
-            b4 = self.read_hdfeos_df_as_xarray(fobj, 3)  # sur_refl_b04
+        b1 = await self.read_hdfeos_df_as_xarray(fobj, 0)  # sur_refl_b01
+        b3 = await self.read_hdfeos_df_as_xarray(fobj, 2)  # sur_refl_b03
+        b4 = await self.read_hdfeos_df_as_xarray(fobj, 3)  # sur_refl_b04
 
-            vari = ((b4 - b1) / (b4 + b1 - b3)).clip(-1, 1)
+        vari = ((b4 - b1) / (b4 + b1 - b3)).clip(-1, 1)
 
-            # Calc spectral index
-            vari_max = vari.max()
-            vari_min = vari.min()
-            vari_range = vari_max - vari_min
-            rvari = (vari - vari_min / vari_range).clip(0, 1)  # SI
-            data = np.reshape(np.array(52.51 ** (1.36 * rvari)),
-                              b1.shape).astype(np.float64)
+        # Calc spectral index
+        vari_max = vari.max()
+        vari_min = vari.min()
+        vari_range = vari_max - vari_min
+        rvari = (vari - vari_min / vari_range).clip(0, 1)  # SI
+        data = np.reshape(np.array(52.51 ** (1.36 * rvari)),
+                          b1.shape).astype(np.float64)
 
-            print(data.shape)
-            print(pd.DataFrame(data).head())
-            print(b1.coords)
-            print(b1.dims)
+        # logger.debug(data.shape)
 
-            # captured = b1.attrs['time']  #TODO <-- DEBUG THIS ATTRIBUTE is it correct?
+        # logger.debug(b1.coords)
+        # logger.debug(b1.dims)
 
-            captured = self.date_for_modis_granule(str(fobj))
+        # captured = b1.attrs['time']  #TODO <-- DEBUG THIS ATTRIBUTE is it correct?
 
-            xrd = xr.Dataset({'LFMC': (['time', 'lat', 'lon'], np.expand_dims(data, axis=0))},
-                             coords={'lon': b1['lon'],
-                                     'lat': b1['lat'],
-                                     'time': pd.date_range(captured, periods=1)})
+        captured = self.date_for_modis_granule(str(fobj))
 
-            print(xrd)
+        xrd = xr.Dataset({'LFMC': (['time', 'lat', 'lon'], np.expand_dims(data, axis=0))},
+                         coords={'lon': b1['lon'],
+                                 'lat': b1['lat'],
+                                 'time': pd.date_range(captured, periods=1)})
 
-            #             xrd.attrs['var_name'] = self.outputs["readings"]["prefix"]
-            xrd.attrs['var_name'] = "LFMC"
-            xrd.attrs['created'] = "%s" % (
-                dt.datetime.now().strftime("%d-%m-%Y"))
-            xrd.attrs['crs'] = '+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs '
-            xrd['time:units'] = 'days since %s' % (
-                captured.strftime("%Y-%m-%d"))
-            xrd.load()
-            h, v = self.hv_for_modis_granule(fobj)
-            d = self.date_for_modis_granule(fobj)
-            name = "LFMC_h{}v{}_{}.nc".format(h, v, d.strftime("%Y%m%d"))
-            xrd.to_netcdf(self.outputs['path'] + name, mode='w',
-                          format='NETCDF4')
+        # logger.debug(xrd)
 
-            # TODO - auto ingest into geoserver!
+        xrd.attrs['var_name'] = self.outputs["readings"]["prefix"]
+        # xrd.attrs['var_name'] = "LFMC"
+        xrd.attrs['created'] = "%s" % (
+            dt.datetime.now().strftime("%d-%m-%Y"))
+        xrd.attrs['crs'] = '+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs '
+        xrd['time:units'] = 'days since %s' % (
+            captured.strftime("%Y-%m-%d"))
+        xrd.load()
+        name = self.fuel_name(fobj)
+        xrd.to_netcdf(self.outputs['readings']['path']
+                      + "/"
+                      + name, mode='w', format='NETCDF4')
+
+        logger.debug('Conversion of granule complete.')
+        # TODO - auto ingest into geoserver!
+        return name
+
+    def fuel_name(self, granule):
+        h, v = self.hv_for_modis_granule(granule)
+        d = self.date_for_modis_granule(granule)
+        name = "LFMC_h{}v{}_{}.nc".format(h, v, d.strftime("%Y%m%d"))
+        return name
 
     @staticmethod
     def date_for_modis_granule(granule):
@@ -409,33 +454,61 @@ class LiveFuelModel(Model):
     # ShapeQuery
     async def get_shaped_resultcube(self, shape_query: ShapeQuery) -> xr.DataArray:
         sr = None
-        fs = await asyncio.gather(*[self.dataset_files(when) for when in shape_query.temporal.dates()])
+        lat1, lon1, lat2, lon2 = shape_query.spatial.expanded(1.1)
+        logger.debug('BL: %3.3f, %3.3f' % (lon1, lat1))
+        logger.debug('TR: %3.3f, %3.3f' % (lon2, lat2))
+        # Eg., "108.0000,-45.0000,155.0000,-10.0000"  # Bottom-left, top-right
+        bbox = "%3.3f,%3.3f,%3.3f,%3.3f" % (lon1, lat1, lon2, lat2)
+        logger.debug("%s" % bbox)
+        collection = await asyncio.gather(*[self.dataset_files(when, bbox)
+                                            for when in shape_query.temporal.dates()])
 
-        print('Files to open are...')
-        print([str(f) for f in fs])
+        logger.debug('Files to open are...')
+        flat_list = list(
+            set([item for sublist in collection for item in sublist]))
+        fs = [self.outputs['readings']['path'] + "/" + f for f in flat_list if Path(
+            self.outputs['readings']['path'] + "/" + f).is_file()]
+        logger.debug(fs)
 
-        fs = [f for f in fs if Path(f).is_file()]
         asyncio.sleep(1)
         if len(fs) > 0:
             with xr.open_mfdataset(fs) as ds:
                 if "observations" in ds.dims:
                     sr = ds.squeeze("observations")
-            sr = sr.sel(time=slice(shape_query.temporal.start.strftime("%Y-%m-%d"),
-                                   shape_query.temporal.finish.strftime("%Y-%m-%d")))
+                else:
+                    sr = ds
+                # sr = sr.sel(time=slice(shape_query.temporal.start.strftime("%Y-%m-%d"),
+                #                        shape_query.temporal.finish.strftime("%Y-%m-%d")))
 
-            return shape_query.apply_mask_to(sr)
+            return sr
         else:
-            print("No files available/gathered for that space/time.")
+            logger.debug("No files available/gathered for that space/time.")
             return xr.DataArray([])
 
-    async def dataset_files(self, when):
-        if self.date_is_cached(when):
-            # TODO - Overload this and use 8 Day product indexing
-            return self.netcdf_name_for_date(when)
-        else:
-            ds_files = await asyncio.gather(*[self.collect_granules(when)])
-            asyncio.sleep(1)
-            return ds_files
+    async def dataset_files(self, when, bbox):
+        """
+        Uses USGS service to match spatiotemporal query to granules required.
+        converts each granule name to LFMC name
+        """
+        product, version, obbox = self.modis_meta
+        dfiles = []
+
+        rurl = "https://lpdaacsvc.cr.usgs.gov/services/inventory?product=" + product + "&version=" + \
+               version + "&bbox=" + bbox + "&date=" + \
+               when.strftime('%Y-%m-%d') + "&output=text"
+
+        inventory = await asyncio.gather(*[self.get_inventory_for_request(rurl)])
+
+        asyncio.sleep(1)
+        # Convert inventory to fuel_names
+        dfiles = [(self.fuel_name(g.split('/')[-1]), g)
+                  for sl in inventory for g in sl]
+
+        all_ok = await asyncio.gather(*[self.retrieve_earth_observation_data(
+            v) for k, v in dfiles if not Path(k).is_file()])
+
+        logger.debug(dfiles)
+        return [k for k, v in dfiles]
 
     def unique_from_nestedlist(self, inventory):
         unique_data = []
@@ -451,10 +524,11 @@ class LiveFuelModel(Model):
 
     async def collect_granules(self, when):
         r = self.build_inventory_request_url(when)
-
-        print('### Request URL for Inventory: \n', r)
+        logger.debug('### Request URL for Inventory: \n')
         inventory = await asyncio.gather(*[self.get_inventory_for_request(r)])
-        print('### Inventory to retrieve: \n', inventory)
+        logger.debug('### Inventory to retrieve: \n')
+        [logger.debug(i) for i in inventory]
+        logger.debug('-' * 80)
         collected = []
 
         os.chdir(self.path)  # ????????
@@ -467,20 +541,16 @@ class LiveFuelModel(Model):
             # for urls in list(grouped_by_date.values()):
 
             inventory = self.unique_from_nestedlist(inventory)
-            print([i for i in inventory])
             for url in inventory:
-                print('Attempting download of: ', url)
                 rok = await self.retrieve_earth_observation_data(url)
-                asyncio.sleep(1)
                 collected.append(rok)
-
-            print([c for c in collected])
             return collected
         else:
-            print('Collecting nothing!')
+            logger.debug('Collecting nothing!')
             return []
 
     async def get_inventory_for_request(self, url_string):
+        logger.debug('Getting %s' % url_string)
         r = requests.get(url_string)
         queue = []
         if r.status_code == 200:
@@ -507,45 +577,30 @@ class LiveFuelModel(Model):
         return rurl
 
     async def get_shaped_timeseries(self, query: ShapeQuery) -> ModelResult:
-        print(
+        logger.debug(
             "\n--->>> Shape Query Called successfully on %s Model!! <<<---" % self.name)
-        sr, weights = await (self.get_shaped_resultcube(query))
+        sr = await (self.get_shaped_resultcube(query))
         sr.load()
         var = self.outputs['readings']['prefix']
         dps = []
         try:
-            print('Trying to find datapoints.')
+            logger.debug('Trying to find datapoints.')
+            geoQ = GeoQuery(query)
+            dps = geoQ.cast_fishnet({'init': 'EPSG:3577'}, sr[var])
+            logger.debug(dps)
 
-            for t in sorted(sr['time'].values):
-
-                d = sr[var].sel(time=t).to_dataframe()
-                df = d[var]
-
-                # cleaned_mask = np.ma.masked_array(weights, np.isnan(weights))
-                # cleaned = np.ma.masked_array(df, np.isnan(df))
-
-                #wm = np.ma.average(cleaned, axis=1, weights=cleaned_mask)
-                wm = -99999
-
-                dps.append(DataPoint(observation_time=str(t).replace('.000000000', '.000Z'),
-                                     value=np.nanmedian(df),
-                                     mean=np.nanmean(df),
-                                     weighted_mean=wm,
-                                     minimum=np.nanmin(df),
-                                     maximum=np.nanmax(df),
-                                     deviation=np.nanstd(df),
-                                     count=df.count()))
         except FileNotFoundError:
-            print('Files not found for date range.')
+            logger.debug('Files not found for date range.')
         except ValueError as ve:
-            print(ve)
+            logger.debug(ve)
         except OSError as oe:
-            print(oe)
+            logger.debug(oe)
+        except KeyError as ke:
+            logger.debug(ke)
 
         if len(dps) == 0:
-            print('Found no datapoints.')
-            print(sr)
-            print(weights)
+            logger.debug('Found no datapoints.')
+            logger.debug(sr)
 
         asyncio.sleep(1)
 

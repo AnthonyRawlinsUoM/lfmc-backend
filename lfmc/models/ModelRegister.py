@@ -24,7 +24,7 @@ from lfmc.models.RelativeHumidity import RHModel
 
 # from lfmc.models.Matthews import Matthews
 from lfmc.models.Yebra import YebraModel
-from lfmc.models.dummy_results import DummyResults
+
 
 from lfmc.models.rx.ObservableModelRegister import ObservableModelRegister
 from lfmc.process.ProcessQueue import ProcessQueue
@@ -249,7 +249,7 @@ class ModelRegister(Observable):
                 dps = []
                 print('Building dummy response for model: %s' % model.name)
                 for j in range(30):
-                    dps.append(DummyResults.dummy_single(j))
+                    # dps.append(DummyResults.dummy_single(j))
                     observer.on_next(ModelResult(
                         model_name=model.name, data_points=dps))
             observer.on_completed()

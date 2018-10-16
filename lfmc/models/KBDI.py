@@ -16,6 +16,11 @@ from lfmc.models.ModelMetaData import ModelMetaData
 
 
 KBDI_PRODUCT = 'IDV71147_VIC_KBDI_SFC.nc'
+import logging
+logging.basicConfig()
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+logger.debug("logger set to DEBUG")
 
 
 class KBDIModel(BomBasedModel):

@@ -13,6 +13,11 @@ from lfmc.models.ModelMetaData import ModelMetaData
 
 
 GFDI_PRODUCT = "IDV71122_VIC_GFDI_SFC.nc"
+import logging
+logging.basicConfig()
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+logger.debug("logger set to DEBUG")
 
 
 class GFDIModel(BomBasedModel):

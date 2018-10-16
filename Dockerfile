@@ -18,6 +18,7 @@ RUN pip install regionmask
 RUN pip install rx aiohttp_cors
 RUN pip install httplib2 geojson
 RUN pip install redis
+RUN pip install tabulate
 
 ADD lfmc /lfmc
 ADD LFMCServer.py /

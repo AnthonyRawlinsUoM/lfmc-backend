@@ -13,6 +13,11 @@ from lfmc.models.ModelMetaData import ModelMetaData
 
 
 TEMP_PRODUCT = 'IDV71002_VIC_MaxT_SFC.nc'
+import logging
+logging.basicConfig()
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+logger.debug("logger set to DEBUG")
 
 
 class TempModel(BomBasedModel):

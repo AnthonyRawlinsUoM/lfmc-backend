@@ -1,0 +1,6 @@
+**/*.pyc
+*.pyc
+__pycache__/**
+**/__pycache__/*
+
+lfmc/library/geoserver/__pycache__/

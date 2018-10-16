@@ -8,6 +8,7 @@ from pathlib2 import Path
 import xarray as xr
 import numpy as np
 from lfmc.query.ShapeQuery import ShapeQuery
+from lfmc.query.GeoQuery import GeoQuery
 from lfmc.results.DataPoint import DataPoint
 from lfmc.results.ModelResult import ModelResult
 from lfmc.results.Abstracts import Abstracts
@@ -15,6 +16,11 @@ from lfmc.results.Author import Author
 import datetime as dt
 from lfmc.models.Model import Model
 from lfmc.models.ModelMetaData import ModelMetaData
+import logging
+logging.basicConfig()
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+logger.debug("logger set to DEBUG")
 
 
 class JasminModel(Model):
@@ -103,7 +109,7 @@ class JasminModel(Model):
         fs = self.netcdf_names_for_dates(
             shape_query.temporal.start, shape_query.temporal.finish)
         if dev.DEBUG:
-            print('{}\n'.format(f) for f in fs)
+            logger.debug('{}\n'.format(f) for f in fs)
         asyncio.sleep(1)
 
         if len(fs) > 0:
@@ -114,55 +120,40 @@ class JasminModel(Model):
                     sr = ds
 
             if dev.DEBUG:
-                print(sr)
+                logger.debug(sr)
             sr.attrs['var_name'] = self.outputs['readings']['prefix']
             sr = sr.sel(time=slice(shape_query.temporal.start.strftime("%Y-%m-%d"),
                                    shape_query.temporal.finish.strftime("%Y-%m-%d")))
 
-            return shape_query.apply_mask_to(sr)
+            return sr
         else:
             return xr.DataArray([])
 
     async def get_shaped_timeseries(self, query: ShapeQuery) -> ModelResult:
-        print(
+        logger.debug(
             "\n--->>> Shape Query Called successfully on %s Model!! <<<---" % self.name)
-        sr, weights = await (self.get_shaped_resultcube(query))
+        sr = await (self.get_shaped_resultcube(query))
         sr.load()
         var = self.outputs['readings']['prefix']
         dps = []
         try:
-            print('Trying to find datapoints.')
+            logger.debug('Trying to find datapoints.')
+            geoQ = GeoQuery(query)
+            dps = geoQ.cast_fishnet({'init': 'EPSG:4326'}, sr[var])
+            logger.debug(dps)
 
-            for t in sorted(sr['time'].values):
-
-                d = sr[var].sel(time=t).to_dataframe()
-                df = d[var]
-
-                # cleaned_mask = np.ma.masked_array(weights, np.isnan(weights))
-                # cleaned = np.ma.masked_array(df, np.isnan(df))
-
-                #wm = np.ma.average(cleaned, axis=1, weights=cleaned_mask)
-                wm = -99999
-
-                dps.append(DataPoint(observation_time=str(t).replace('.000000000', '.000Z'),
-                                     value=np.nanmedian(df),
-                                     mean=np.nanmean(df),
-                                     weighted_mean=wm,
-                                     minimum=np.nanmin(df),
-                                     maximum=np.nanmax(df),
-                                     deviation=np.nanstd(df),
-                                     count=df.count()))
         except FileNotFoundError:
-            print('Files not found for date range.')
+            logger.debug('Files not found for date range.')
         except ValueError as ve:
-            print(ve)
+            logger.debug(ve)
         except OSError as oe:
-            print(oe)
+            logger.debug(oe)
+        except KeyError as ke:
+            logger.debug(ke)
 
         if len(dps) == 0:
-            print('Found no datapoints.')
-            print(sr)
-            print(weights)
+            logger.debug('Found no datapoints.')
+            logger.debug(sr)
 
         asyncio.sleep(1)
 

@@ -7,6 +7,7 @@ import numpy as np
 import xarray as xr
 import lfmc.config.debug as dev
 from lfmc.query import ShapeQuery
+from lfmc.query.GeoQuery import GeoQuery
 from lfmc.results.Abstracts import Abstracts
 from lfmc.results.Author import Author
 import datetime as dt
@@ -15,7 +16,12 @@ from lfmc.results.DataPoint import DataPoint
 from lfmc.results.ModelResult import ModelResult
 from lfmc.models.ModelMetaData import ModelMetaData
 from lfmc.query.SpatioTemporalQuery import SpatioTemporalQuery
-from lfmc.models.dummy_results import DummyResults
+
+import logging
+logging.basicConfig()
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+logger.debug("logger set to DEBUG")
 
 
 class AWRAModel(Model):
@@ -84,37 +90,21 @@ class AWRAModel(Model):
 
         # if dev.DEBUG:
         #     print(ts)
-        return shape_query.apply_mask_to(ts)
+        return ts
 
     async def get_shaped_timeseries(self, query: ShapeQuery) -> ModelResult:
         print(
             "\n--->>> Shape Query Called successfully on %s Model!! <<<---" % self.name)
-        sr, weights = await (self.get_shaped_resultcube(query))
+        sr = await (self.get_shaped_resultcube(query))
         sr.load()
         var = self.outputs['readings']['prefix']
         dps = []
         try:
             print('Trying to find datapoints.')
 
-            for t in sorted(sr['time'].values):
-
-                d = sr[var].sel(time=t).to_dataframe()
-                df = d[var]
-
-                # cleaned_mask = np.ma.masked_array(weights, np.isnan(weights))
-                # cleaned = np.ma.masked_array(df, np.isnan(df))
-
-                #wm = np.ma.average(cleaned, axis=1, weights=cleaned_mask)
-                wm = -99999
-
-                dps.append(DataPoint(observation_time=str(t).replace('.000000000', '.000Z'),
-                                     value=np.nanmedian(df),
-                                     mean=np.nanmean(df),
-                                     weighted_mean=wm,
-                                     minimum=np.nanmin(df),
-                                     maximum=np.nanmax(df),
-                                     deviation=np.nanstd(df),
-                                     count=df.count()))
+            geoQ = GeoQuery(query)
+            dps = geoQ.cast_fishnet({'init': 'EPSG:3111'}, sr[var])
+            logger.debug(dps)
         except FileNotFoundError:
             print('Files not found for date range.')
         except ValueError as ve:
@@ -125,7 +115,6 @@ class AWRAModel(Model):
         if len(dps) == 0:
             print('Found no datapoints.')
             print(sr)
-            print(weights)
 
         asyncio.sleep(1)
 

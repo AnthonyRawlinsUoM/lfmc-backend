@@ -8,6 +8,7 @@ import xarray as xr
 import numpy as np
 
 from lfmc.query import ShapeQuery
+from lfmc.query.GeoQuery import GeoQuery
 from lfmc.results.MPEGFormatter import MPEGFormatter
 from lfmc.results.Abstracts import Abstracts
 from lfmc.results.Author import Author
@@ -17,7 +18,12 @@ from lfmc.results.ModelResult import ModelResult
 from lfmc.models.ModelMetaData import ModelMetaData
 from lfmc.results.DataPoint import DataPoint
 from lfmc.query.SpatioTemporalQuery import SpatioTemporalQuery
-from lfmc.models.dummy_results import DummyResults
+
+import logging
+logging.basicConfig()
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+logger.debug("logger set to DEBUG")
 
 
 class YebraModel(Model):
@@ -75,7 +81,7 @@ Characteristic plot method of 0.70, 0.78 and 0.71, respectively, indicating reas
         self.outputs = {
             "type": "fuel moisture",
             "readings": {
-                "prefix": "LVMC",
+                "prefix": "lvmc_mean",
                 "path": self.output_path,
                 "suffix": ".nc"
             }
@@ -93,19 +99,19 @@ Characteristic plot method of 0.70, 0.78 and 0.71, respectively, indicating reas
     def netcdf_name_for_date(self, when):
         fname = self.output_path + \
             "australia_LVMC_{}.nc".format(when.strftime("%Y"))
-        print(fname)
+        logger.debug(fname)
         return fname
 
     async def dataset_files(self, when):
         return self.netcdf_name_for_date(when)
 
     async def get_netcdf(self, query: ShapeQuery):
-        sr, weights = await (self.get_shaped_resultcube(query))
+        sr = await (self.get_shaped_resultcube(query))
         return sr
 
     async def mpg(self, query: ShapeQuery):
-        sr, weights = await (self.get_shaped_resultcube(query))
-        print(sr)
+        sr = await (self.get_shaped_resultcube(query))
+        logger.debug(sr)
         mp4 = await (MPEGFormatter.format(sr, "lvmc_mean"))
         asyncio.sleep(1)
         return mp4
@@ -116,7 +122,7 @@ Characteristic plot method of 0.70, 0.78 and 0.71, respectively, indicating reas
         ps = await asyncio.gather(*[self.dataset_files(when) for when in shape_query.temporal.dates()])
         [fs.add(f) for f in ps if (f is not None and Path(f).is_file())]
 
-        [print("Confirmed: %s" % f) for f in fs]
+        [logger.debug("Confirmed: %s" % f) for f in fs]
 
         if len(fs) == 1:
             with xr.open_dataset(*fs) as ds:
@@ -124,8 +130,7 @@ Characteristic plot method of 0.70, 0.78 and 0.71, respectively, indicating reas
                 ds.attrs['var_name'] = "lvmc_mean"
                 tr = ds.sel(time=slice(shape_query.temporal.start.strftime("%Y-%m-%d"),
                                        shape_query.temporal.finish.strftime("%Y-%m-%d")))
-                print(tr)
-                return shape_query.apply_mask_to(tr)
+                return tr
 
         elif len(fs) > 1:
             with xr.open_mfdataset(*fs) as ds:
@@ -134,53 +139,36 @@ Characteristic plot method of 0.70, 0.78 and 0.71, respectively, indicating reas
                 ts = ds.sel(time=slice(shape_query.temporal.start.strftime("%Y-%m-%d"),
                                        shape_query.temporal.finish.strftime("%Y-%m-%d")))
 
-                print(ts)
-                return shape_query.apply_mask_to(ts)
+                return ts
         else:
-            print("No files available/gathered for that space/time.")
+            logger.debug("No files available/gathered for that space/time.")
 
             return xr.DataArray([])
 
     async def get_shaped_timeseries(self, query: ShapeQuery) -> ModelResult:
-        print(
+        logger.debug(
             "\n--->>> Shape Query Called successfully on %s Model!! <<<---" % self.name)
-        sr, weights = await (self.get_shaped_resultcube(query))
+        sr = await (self.get_shaped_resultcube(query))
         sr.load()
         var = self.outputs['readings']['prefix']
         dps = []
         try:
-            print('Trying to find datapoints.')
+            logger.debug('Trying to find datapoints.')
 
-            for t in sorted(sr['time'].values):
+            geoQ = GeoQuery(query)
+            dps = geoQ.cast_fishnet({'init': 'EPSG:3577'}, sr[var])
+            logger.debug(dps)
 
-                d = sr[var].sel(time=t).to_dataframe()
-                df = d[var]
-
-                # cleaned_mask = np.ma.masked_array(weights, np.isnan(weights))
-                # cleaned = np.ma.masked_array(df, np.isnan(df))
-
-                #wm = np.ma.average(cleaned, axis=1, weights=cleaned_mask)
-                wm = -99999
-
-                dps.append(DataPoint(observation_time=str(t).replace('.000000000', '.000Z'),
-                                     value=np.nanmedian(df),
-                                     mean=np.nanmean(df),
-                                     weighted_mean=wm,
-                                     minimum=np.nanmin(df),
-                                     maximum=np.nanmax(df),
-                                     deviation=np.nanstd(df),
-                                     count=df.count()))
         except FileNotFoundError:
-            print('Files not found for date range.')
+            logger.debug('Files not found for date range.')
         except ValueError as ve:
-            print(ve)
+            logger.debug(ve)
         except OSError as oe:
-            print(oe)
+            logger.debug(oe)
 
         if len(dps) == 0:
-            print('Found no datapoints.')
-            print(sr)
-            print(weights)
+            logger.debug('Found no datapoints.')
+            logger.debug(sr)
 
         asyncio.sleep(1)
 

@@ -9,9 +9,15 @@ from pathlib2 import Path
 import lfmc.config.debug as dev
 from lfmc.models.Model import Model
 from lfmc.query import ShapeQuery
+from lfmc.query.GeoQuery import GeoQuery
 from lfmc.results.DataPoint import DataPoint
 from lfmc.results.MPEGFormatter import MPEGFormatter
 from lfmc.results.ModelResult import ModelResult
+import logging
+logging.basicConfig()
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+logger.debug("logger set to DEBUG")
 
 
 class BomBasedModel(Model):
@@ -22,7 +28,7 @@ class BomBasedModel(Model):
         return ['/tmp']  # DEBUG ONLY
 
     async def mpg(self, query: ShapeQuery):
-        sr, weights = await (self.get_shaped_resultcube(query))
+        sr = await (self.get_shaped_resultcube(query))
         print(sr)
         mp4 = await (MPEGFormatter.format(
             sr, self.outputs["readings"]["prefix"]))
@@ -30,7 +36,7 @@ class BomBasedModel(Model):
         return mp4
 
     async def get_netcdf(self, query: ShapeQuery):
-        sr, weights = await (self.get_shaped_resultcube(query))
+        sr = await (self.get_shaped_resultcube(query))
         return sr
 
     # ShapeQuery
@@ -73,7 +79,7 @@ class BomBasedModel(Model):
                 ts = xr1.sel(time=slice(shape_query.temporal.start.strftime("%Y-%m-%d"),
                                         shape_query.temporal.finish.strftime("%Y-%m-%d")))
 
-            return shape_query.apply_mask_to(ts)
+            return ts
         else:
             raise FileNotFoundError('No data exists for that date range')
 
@@ -131,9 +137,9 @@ class BomBasedModel(Model):
                 else:
                     # Can't yet save the year as an archive it's incomplete
                     print('Attempted to create an annual archive for %s,'
-                          'but the year (%d) is incomplete, containing just %d days' % (self.code,
-                                                                                        year,
-                                                                                        len(time_records)))
+                          'but the year (%d) is incomplete, containing just %d records' % (self.code,
+                                                                                           year,
+                                                                                           len(time_records)))
                     return False
         else:
             return False
@@ -177,7 +183,8 @@ class BomBasedModel(Model):
 
             short_list = list(set(cdf_list))
             # Assemble the individual components that contain that date range
-            return [f for f in short_list if Path(f).is_file()]  # Auto-magically accepts only files that actually exist
+            # Auto-magically accepts only files that actually exist
+            return [f for f in short_list if Path(f).is_file()]
 
     def all_netcdfs(self):
         """
@@ -190,32 +197,17 @@ class BomBasedModel(Model):
     async def get_shaped_timeseries(self, query: ShapeQuery) -> ModelResult:
         print(
             "\n--->>> Shape Query Called successfully on %s Model!! <<<---" % self.name)
-        sr, weights = await (self.get_shaped_resultcube(query))
+        sr = await (self.get_shaped_resultcube(query))
         sr.load()
         var = self.outputs['readings']['prefix']
         dps = []
         try:
             print('Trying to find datapoints.')
 
-            for t in sorted(sr['time'].values):
+            geoQ = GeoQuery(query)
+            dps = geoQ.cast_fishnet({'init': 'EPSG:3111'}, sr[var])
+            logger.debug(dps)
 
-                d = sr[var].sel(time=t).to_dataframe()
-                df = d[var]
-
-                # cleaned_mask = np.ma.masked_array(weights, np.isnan(weights))
-                # cleaned = np.ma.masked_array(df, np.isnan(df))
-
-                #wm = np.ma.average(cleaned, axis=1, weights=cleaned_mask)
-                wm = -99999
-
-                dps.append(DataPoint(observation_time=str(t).replace('.000000000', '.000Z'),
-                                     value=np.nanmedian(df),
-                                     mean=np.nanmean(df),
-                                     weighted_mean=wm,
-                                     minimum=np.nanmin(df),
-                                     maximum=np.nanmax(df),
-                                     deviation=np.nanstd(df),
-                                     count=df.count()))
         except FileNotFoundError:
             print('Files not found for date range.')
         except ValueError as ve:
@@ -226,7 +218,6 @@ class BomBasedModel(Model):
         if len(dps) == 0:
             print('Found no datapoints.')
             print(sr)
-            print(weights)
 
         asyncio.sleep(1)
 

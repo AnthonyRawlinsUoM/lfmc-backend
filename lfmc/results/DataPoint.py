@@ -11,7 +11,7 @@ logger.debug("logger set to DEBUG")
 
 class DataPoint:
     def __init__(self, observation_time: fields.String(), value: float, weighted_mean: float, mean: float,
-                 minimum: float, maximum: float, deviation: float, count: float):
+                 minimum: float, maximum: float, deviation: float, median: float, count: float):
         """Short summary.
 
         Parameters
@@ -43,6 +43,7 @@ class DataPoint:
         self.max = maximum
         self.std = deviation
         self.count = count
+        self.median = median
 
     def __str__(self):
         dps = DataPointSchema()
@@ -60,3 +61,4 @@ class DataPointSchema(Schema):
     max = fields.Float()
     std = fields.Float()
     count = fields.Float()
+    median = fields.Float()

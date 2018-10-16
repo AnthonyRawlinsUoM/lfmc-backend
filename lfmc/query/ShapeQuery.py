@@ -19,11 +19,12 @@ from scipy.spatial import ConvexHull
 # import cartopy.feature as cfeature
 import cartopy.crs as ccrs
 import shapely
-# from shapely.wkt import dumps, loads
-from shapely.geometry import Polygon, mapping, shape
+from shapely.wkt import dumps, loads
+from shapely.ops import polygonize
+from shapely.geometry import LineString, MultiLineString, Polygon, MultiPolygon, mapping, shape
 # from shapely import affinity
 from affine import Affine
-
+import pyproj
 # import fiona
 # from fiona.crs import from_epsg
 #
@@ -32,6 +33,8 @@ from affine import Affine
 # from rasterio import features
 from rasterio.features import rasterize
 import logging
+
+
 logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)

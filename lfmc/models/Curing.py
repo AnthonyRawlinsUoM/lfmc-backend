@@ -16,6 +16,11 @@ from lfmc.results.MPEGFormatter import MPEGFormatter
 from lfmc.results.ModelResult import ModelResult
 
 CURING_PRODUCT = 'IDV71139_VIC_Curing_SFC.nc'
+import logging
+logging.basicConfig()
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+logger.debug("logger set to DEBUG")
 
 
 class CuringModel(BomBasedModel):

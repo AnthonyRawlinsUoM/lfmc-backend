@@ -12,6 +12,11 @@ from lfmc.models.Model import Model
 from lfmc.models.ModelMetaData import ModelMetaData
 
 RH_PRODUCT = 'IDV71018_VIC_RH_SFC.nc'
+import logging
+logging.basicConfig()
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+logger.debug("logger set to DEBUG")
 
 
 class RHModel(BomBasedModel):

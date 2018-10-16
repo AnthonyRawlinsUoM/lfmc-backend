@@ -14,6 +14,11 @@ from lfmc.models.ModelMetaData import ModelMetaData
 
 
 FFDI_PRODUCT = 'IDV71117_VIC_FFDI_SFC.nc'
+import logging
+logging.basicConfig()
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+logger.debug("logger set to DEBUG")
 
 
 class FFDIModel(BomBasedModel):
