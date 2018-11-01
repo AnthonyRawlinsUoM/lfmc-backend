@@ -59,7 +59,7 @@ class AWRAModel(Model):
             "readings": {
                 "path": self.path,
                 "url": "",
-                "prefix": "sm_pct",
+                "prefix": "s0_pct",
                 "suffix": ".nc"
             }
         }

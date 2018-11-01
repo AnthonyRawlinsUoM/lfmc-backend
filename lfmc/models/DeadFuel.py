@@ -258,6 +258,33 @@ class DeadFuelModel(Model):
     #            for t in range(0, len(sr["time"]))]
     #     return ModelResult(model_name=self.name, data_points=dps)
 
+    def consolidate_year(y):
+        for year in range(y, y + 1):
+            with xr.open_mfdataset("%s%s_%s*" % (self.outputs['readings']['path'], self.outputs['readings']['prefix'], year), chunks={'time': 1}) as ds:
+                ds['DFMC'] = ds['DFMC'].isel(observations=0, drop=True)
+                dm = ds['DFMC'].isel(time=0)
+                mask = AUmask.mask(dm['longitude'], dm['latitude'])
+                mask_ma = np.ma.masked_invalid(mask)
+                ds = ds.where(mask_ma == 0)
+                logger.debug("--- Saving %s" % (year))
+                ds.attrs = dict()
+                ds.attrs['crs'] = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs "
+                ds.attrs['var_name'] = 'DFMC'
+
+                ds['time'].attrs['long_name'] = 'time'
+                ds['time'].attrs['name'] = 'time'
+                ds['time'].attrs['standard_name'] = 'time'
+
+                ds['DFMC'].attrs['units'] = 'fullness'
+                ds['DFMC'].attrs[
+                    'long_name'] = 'Dead Fine Fuels Moisture Content - (Percentage wet over dry by weight)'
+                ds['DFMC'].attrs['name'] = self.outputs['readings']['prefix']
+                ds['DFMC'].attrs['standard_name'] = self.outputs['readings']['prefix']
+                logger.debug(ds)
+                logger.debug(ds[self.outputs['readings']['prefix']])
+                ds.to_netcdf("%s%s_%s.nc" %
+                             (self.path, self.outputs['readings']['prefix'], year))
+
     @staticmethod
     def do_conversion(file_name, param, when):
         """ Converts Arc Grid input files to NetCDF4 """

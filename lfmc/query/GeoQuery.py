@@ -60,17 +60,20 @@ class GeoQuery(ShapeQuery):
                 df['latitude'] >= bottom, drop=True).values
             lons = df['longitude'].where(df['longitude'] <= right, drop=True).where(
                 df['longitude'] >= left, drop=True).values
+            # logger.debug(lons)
+            # logger.debug(lats)
         elif 'lat' in df.coords:
             lats = df['lat'].where(df['lat'] <= top, drop=True).where(
                 df['lat'] >= bottom, drop=True).values
             lons = df['lon'].where(df['lon'] <= right, drop=True).where(
                 df['lon'] >= left, drop=True).values
+            # logger.debug(lons)
+            # logger.debug(lats)
         else:
             logger.debug("Can't determine coordinate naming conventions.")
         # lons = np.arange(140.9500, 149.9800, 0.05)
         # lats = np.arange(-34.0000, -39.1500, -0.05)
-        # logger.debug(lons)
-        # logger.debug(lats)
+
         # logger.debug(df)
 
         xl = len(lons) + 1

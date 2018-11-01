@@ -64,7 +64,7 @@ class JasminModel(Model):
                 system.")
         self.metadata = ModelMetaData(authors=authors, published_date=pub_date, fuel_types=["surface"],
                                       doi="http://dx.doi.org/10.1016/j.rse.2015.12.010", abstract=abstract)
-
+        self.source = "http://opendap.bom.gov.au:8080/thredds/catalog/c35ee8d2a475e10ea06d0ad53b46ce2a/JASMIN_land_dryness/catalog.html"
         self.path = os.path.abspath(Model.path() + 'JASMIN') + '/'
         self.ident = "JASMIN"
         self.code = "JASMIN"
@@ -73,7 +73,7 @@ class JasminModel(Model):
             "readings": {
                 "path": self.path,
                 "url": "",
-                "prefix": "smd",
+                "prefix": "sm",
                 "suffix": ".nc"
             }
         }
@@ -87,7 +87,7 @@ class JasminModel(Model):
 
         for d in pd.date_range(window_begin, window_end):
             cdf_list += [p for p in
-                         glob.glob(Model.path() + "JASMIN/rescaled/21vls/jasmin.kbdi/temporal/jasmin.kbdi.cdf_temporal.2lvls.{}.nc".format(d.strftime("%Y")))]
+                         glob.glob(Model.path() + "JASMIN/native/jasmin.vol.smc.{}.nc".format(d.strftime("%Y")))]
 
         return [f for f in list(set(cdf_list)) if Path(f).is_file()]
 
@@ -99,7 +99,7 @@ class JasminModel(Model):
         :return:
         """
         possibles = [p for p in glob.glob(Model.path(
-        ) + "JASMIN/rescaled/21vls/jasmin.kbdi/temporal/jasmin.kbdi.cdf_temporal.2lvls.*.nc")]
+        ) + "native/jasmin.vol.smc.*.nc")]
         return [f for f in possibles if Path(f).is_file()]
 
     # ShapeQuery
@@ -119,12 +119,26 @@ class JasminModel(Model):
                 else:
                     sr = ds
 
+            sr.attrs['var_name'] = self.outputs['readings']['prefix']
+
+            sr = sr.where(sr.level == 0.1, drop=True).squeeze('level')
+
+            # Workaround for Bug - Daylight Savings time (double daily entry bug)
+            ds = None
+            for t in sorted(list(set(sorted(sr.sm.time.values)))):
+                a = sr.sel(time=t)
+                if 'time' in a.dims:
+                    a = a.isel(time=0)
+                if ds is None:
+                    ds = a
+                else:
+                    if 'sm' in a.data_vars:
+                        ds = xr.concat([ds, a], dim='time')
+
+            sr = ds.sel(time=slice(shape_query.temporal.start.strftime("%Y-%m-%d"),
+                                   shape_query.temporal.finish.strftime("%Y-%m-%d")))
             if dev.DEBUG:
                 logger.debug(sr)
-            sr.attrs['var_name'] = self.outputs['readings']['prefix']
-            sr = sr.sel(time=slice(shape_query.temporal.start.strftime("%Y-%m-%d"),
-                                   shape_query.temporal.finish.strftime("%Y-%m-%d")))
-
             return sr
         else:
             return xr.DataArray([])

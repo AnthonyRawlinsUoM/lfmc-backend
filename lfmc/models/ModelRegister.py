@@ -32,6 +32,12 @@ from lfmc.query import ShapeQuery
 from lfmc.results.DataPoint import DataPoint
 from lfmc.results.ModelResult import ModelResult
 
+import logging
+logging.basicConfig()
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+logger.debug("logger set to DEBUG")
+
 
 class ModelRegister(Observable):
 
@@ -65,11 +71,8 @@ class ModelRegister(Observable):
                        ]
 
         self.model_names = self.get_model_names()
-
         self.geo_server = GeoServer()
-
         self.pq = ProcessQueue()
-
         # validation = self.validate_catalog()
         pass
 
@@ -80,18 +83,18 @@ class ModelRegister(Observable):
 
         try:
             stores = self.geo_server.catalog.get_stores(workspace='lfmc')
-            print(stores)
+            logger.debug(stores)
 
             for coverage_store in stores:
                 published_ncs.append(coverage_store.name)
-                print(coverage_store.name)
+                logger.debug(coverage_store.name)
                 # coverage = self.geo_server.catalog.get_resources(store=coverage_store, workspace='lfmc')
-                # print(coverage)
+                # logger.debug(coverage)
                 # for r in coverage:
-                #     print('Coverage Resource: ', r.title)
+                #     logger.debug('Coverage Resource: ', r.title)
 
         except FailedRequestError as e:
-            print(e)
+            logger.debug(e)
 
         for m in self.models:
             # Ensure there's a layer for each NetCDF file held in the DataSources
@@ -102,7 +105,7 @@ class ModelRegister(Observable):
                 lg = self.geo_server.get_layer_group(
                     m.code)  # NB Not m.name, it's m.code!
             except FailedRequestError as e:
-                print(e)
+                logger.debug(e)
 
             unpublished = []
 
@@ -110,23 +113,24 @@ class ModelRegister(Observable):
                 good_model = '\nModel: %s is published under LayerGroup: %s' % (
                     m, lg)
                 this_model = {'validation': good_model}
-                print(this_model)
+                logger.debug(this_model)
 
                 indexed = m.all_netcdfs()
 
-                print('Found %d NetCDFs for this model.' % len(indexed))
-                print(indexed)
+                logger.debug('Found %d NetCDFs for this model.' % len(indexed))
+                logger.debug(indexed)
 
                 for i in indexed:
                     name_part = i.split('/')[-1].replace('.nc', '')
                     if name_part not in published_ncs:
-                        print('Not found in GeoServer Catalog: %s' % name_part)
+                        logger.debug(
+                            'Not found in GeoServer Catalog: %s' % name_part)
                         unpublished.append(i)
 
-                        self.do_work(name_part, "lfmc", i)
+                        # self.do_work(name_part, "lfmc", i)
 
-                print('%d of %s are published.' %
-                      (len(lg.layers), len(unpublished)))
+                logger.debug('%d of %s are published.' %
+                             (len(lg.layers), len(unpublished)))
 
                 if len(unpublished) > 0:
                     this_model['unpublished'] = unpublished
@@ -136,21 +140,23 @@ class ModelRegister(Observable):
                     for lgl in lg.layers:
                         this_layer = self.geo_server.catalog.get_layer(
                             name=lgl)
-                        print(this_layer.name)
+                        logger.debug(this_layer.name)
 
                 validation.append(this_model)
 
-        print('Done checking for layer groups in GeoServer.')
+        logger.debug('Done checking for layer groups in GeoServer.')
         return validation, errors
 
     def do_work(self, name, workspace, path):
         """
-        GSCONFIG - Python bindings are also available from gsconfig.py, but there is no implementation of working with
-        NetCDF files yet! So we are using Requests to do the actual ingestion.
+        GSCONFIG - Python bindings are also available from gsconfig.py, but
+        there is no implementation of working with NetCDF files yet! So we are
+        using Requests to do the actual ingestion.
 
         Adding a NetCDF coverage store
-        At the moment of writing, the NetCDF plugin supports datasets where each variable’s axis is identified by an
-        independent coordinate variable, therefore two dimensional non-independent latitude-longitude coordinate
+        At the moment of writing, the NetCDF plugin supports datasets where each
+        variable’s axis is identified by an independent coordinate variable,
+        therefore two dimensional non-independent latitude-longitude coordinate
         variables aren’t currently supported.
 
         """
@@ -169,6 +175,8 @@ class ModelRegister(Observable):
                  '</workspace><enabled>true</enabled><type>NetCDF</type><url>' +
             path + '</url></coverageStore>',
             headers=headers_xml)
+        #
+        # if r_create_coveragestore.status_code == '200':
 
         # LAYER GROUPS
         # http://geoserver.landscapefuelmoisture.bushfirebehaviour.net.au/geoserver/rest/workspaces/lfmc/layergroups
@@ -187,37 +195,37 @@ class ModelRegister(Observable):
 
         # Add that layer to the LayerGroup
 
-#     def add_coverage
-#
-#
-#
-#
-#
-#     def make_layer_xml(self):
-#         return "<?xml version="1.0" encoding="UTF-8"?> \
-# <layer> \
-#     <id>string</id> \
-#     <enabled>true</enabled> \
-#     <inMemoryCached>true</inMemoryCached> \
-#     <name>string</name> \
-#     <mimeFormats>string</mimeFormats> \
-#     <gridSubsets> \
-#         <gridSubset> \
-#             <gridSetName>string</gridSetName> \
-#             <extent> \
-#                 <bounds>0</bounds> \
-#             </extent> \
-#             <zoomStart>0</zoomStart> \
-#             <zoomStop>0</zoomStop> \
-#         </gridSubset> \
-#     </gridSubsets> \
-#     <metaWidthHeight>0</metaWidthHeight> \
-#     <expireCache>0</expireCache> \
-#     <expireClients>0</expireClients> \
-#     <parameterFilters> \
-#     </parameterFilters> \
-#     <gutter>0</gutter> \
-# </layer>"
+        #     def add_coverage
+        #
+        #
+        #
+        #
+        #
+        #     def make_layer_xml(self):
+        #         return "<?xml version="1.0" encoding="UTF-8"?> \
+        # <layer> \
+        #     <id>string</id> \
+        #     <enabled>true</enabled> \
+        #     <inMemoryCached>true</inMemoryCached> \
+        #     <name>string</name> \
+        #     <mimeFormats>string</mimeFormats> \
+        #     <gridSubsets> \
+        #         <gridSubset> \
+        #             <gridSetName>string</gridSetName> \
+        #             <extent> \
+        #                 <bounds>0</bounds> \
+        #             </extent> \
+        #             <zoomStart>0</zoomStart> \
+        #             <zoomStop>0</zoomStop> \
+        #         </gridSubset> \
+        #     </gridSubsets> \
+        #     <metaWidthHeight>0</metaWidthHeight> \
+        #     <expireCache>0</expireCache> \
+        #     <expireClients>0</expireClients> \
+        #     <parameterFilters> \
+        #     </parameterFilters> \
+        #     <gutter>0</gutter> \
+        # </layer>"
 
     def register_new_model(self, new_model: Model):
         self.models.append(new_model)
@@ -243,11 +251,12 @@ class ModelRegister(Observable):
 
     def subscribe(self, observer):
         if dev.DEBUG:
-            print("Got subscription. Building response.")
+            logger.debug("Got subscription. Building response.")
 
             for model in self.models:
                 dps = []
-                print('Building dummy response for model: %s' % model.name)
+                logger.debug(
+                    'Building dummy response for model: %s' % model.name)
                 for j in range(30):
                     # dps.append(DummyResults.dummy_single(j))
                     observer.on_next(ModelResult(
