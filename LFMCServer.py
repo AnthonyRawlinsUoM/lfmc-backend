@@ -55,7 +55,7 @@ def test(body=None):
 
 
 @hug.cli()
-@api.urls('/validate', versions=range(1, 2))
+@api.get('/validate', versions=range(1, 2))
 def validate():
     mr = ModelRegister()
     return mr.validate_catalog()
@@ -211,7 +211,8 @@ async def fuel_json(geo_json,
     if models is None:
         return {'ModelError': 'No suitable model found for: ' + models}
     elif len(models) > 1:
-        raise ValueError("LFMC API Server got Multiple model request. This shouldn't happen!")
+        raise ValueError(
+            "LFMC API Server got Multiple model request. This shouldn't happen!")
     else:
         model = models[0]
         mr = ModelRegister()

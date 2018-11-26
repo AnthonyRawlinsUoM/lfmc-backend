@@ -4,6 +4,7 @@ import os
 import os.path
 from pathlib import Path
 
+from lfmc.util import compression as util
 from lfmc.models.BomBasedModel import BomBasedModel
 from lfmc.results.Abstracts import Abstracts
 from lfmc.results.Author import Author
@@ -22,7 +23,7 @@ logger.debug("logger set to DEBUG")
 class RHModel(BomBasedModel):
 
     def __init__(self):
-        self.name = "humidity"
+        self.name = "RH"
 
         # TODO - Proper metadata!
         authors = [
@@ -46,6 +47,15 @@ class RHModel(BomBasedModel):
                 "suffix": ".nc"
             }
         }
+
+    def all_netcdfs(self):
+        gzs = glob.glob(
+            Model.path() + "Weather/*/{}.gz".format(RH_PRODUCT))
+        util.expand_in_place([g for g in gzs if Path(g).is_file()])
+
+        ncs = glob.glob(
+            Model.path() + "Weather/*/{}".format(RH_PRODUCT))
+        return super().all_netcdfs() + [p for p in ncs if Path(p).is_file()]
 
     def netcdf_name_for_date(self, when):
         return self.netcdf_names_for_date(when, RH_PRODUCT)

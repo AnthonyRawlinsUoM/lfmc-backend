@@ -21,7 +21,7 @@ from lfmc.results.ModelResult import ModelResult
 from lfmc.query.ShapeQuery import ShapeQuery
 from lfmc.query.GeoQuery import GeoQuery
 from lfmc.query.SpatioTemporalQuery import SpatioTemporalQuery
-
+import pickle
 
 import matplotlib.pyplot as plt
 import logging
@@ -258,7 +258,10 @@ class DeadFuelModel(Model):
     #            for t in range(0, len(sr["time"]))]
     #     return ModelResult(model_name=self.name, data_points=dps)
 
-    def consolidate_year(y):
+    def consolidate_year(self, y):
+
+        AUmask = pickle.load('australia.pickle')
+
         for year in range(y, y + 1):
             with xr.open_mfdataset("%s%s_%s*" % (self.outputs['readings']['path'], self.outputs['readings']['prefix'], year), chunks={'time': 1}) as ds:
                 ds['DFMC'] = ds['DFMC'].isel(observations=0, drop=True)

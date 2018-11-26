@@ -6,8 +6,11 @@ import rx
 from marshmallow import fields, Schema
 from rx import Observable
 from lfmc.config import debug as dev
+
 from lfmc.library.GeoServer import GeoServer
 from lfmc.library.geoserver.catalog import FailedRequestError, UploadError
+from lfmc.library.geoserver.support import DimensionInfo
+
 from lfmc.models.Curing import CuringModel
 from lfmc.models.JASMIN import JasminModel
 from lfmc.models.LiveFuel import LiveFuelModel
@@ -17,7 +20,9 @@ from lfmc.models.DeadFuel import DeadFuelModel
 from lfmc.models.FFDI import FFDIModel
 from lfmc.models.KBDI import KBDIModel
 from lfmc.models.GFDI import GFDIModel
-from lfmc.models.AWRA import AWRAModel
+from lfmc.models.AWRAroot import AWRAModelRoot
+from lfmc.models.AWRAlower import AWRAModelLower
+from lfmc.models.AWRAupper import AWRAModelUpper
 from lfmc.models.DF import DFModel
 from lfmc.models.Temp import TempModel
 from lfmc.models.RelativeHumidity import RHModel
@@ -49,7 +54,11 @@ class ModelRegister(Observable):
         ffdi = FFDIModel()
         gfdi = GFDIModel()
         kbdi = KBDIModel()
-        awra = AWRAModel()
+
+        awraR = AWRAModelRoot()
+        awraL = AWRAModelLower()
+        awraU = AWRAModelUpper()
+
         curing = CuringModel()
         jasmin = JasminModel()
         drought = DFModel()
@@ -62,7 +71,9 @@ class ModelRegister(Observable):
                        temp,
                        humidity,
                        gfdi,
-                       awra,
+                       awraR,
+                       awraL,
+                       awraU,
                        curing,
                        jasmin,
                        kbdi,
@@ -82,6 +93,7 @@ class ModelRegister(Observable):
         published_ncs = []
 
         try:
+
             stores = self.geo_server.catalog.get_stores(workspace='lfmc')
             logger.debug(stores)
 
@@ -118,19 +130,31 @@ class ModelRegister(Observable):
                 indexed = m.all_netcdfs()
 
                 logger.debug('Found %d NetCDFs for this model.' % len(indexed))
-                logger.debug(indexed)
+                # [logger.debug('>> ' + nf.split('/')[-1]) for nf in indexed]
 
                 for i in indexed:
-                    name_part = i.split('/')[-1].replace('.nc', '')
-                    if name_part not in published_ncs:
-                        logger.debug(
-                            'Not found in GeoServer Catalog: %s' % name_part)
-                        unpublished.append(i)
+                    # Partial Weather files...
+                    parts = i.split('/')
+                    logger.debug(parts[2])
+                    name_part = parts[-1].replace('.nc', '')
+                    if parts[2] == 'Weather':
+                        logger.warning(
+                            'Cannot load partial archives from Weather! A whole year archive is required.')
+                        # Create the Layer name from the BOM naming conventions and date from the path
 
-                        # self.do_work(name_part, "lfmc", i)
+                    # IDN for NSW ??? might break later... potential bug
+                    elif not name_part[:3] == 'IDV':
+                        if name_part not in published_ncs:
+                            logger.debug(
+                                'Not found in GeoServer Catalog: %s' % name_part)
+                            try:
+                                self.geo_server.add_to_catalog(
+                                    lg, parts[-1], i)
+                            except:
+                                unpublished.append(i)
 
-                logger.debug('%d of %s are published.' %
-                             (len(lg.layers), len(unpublished)))
+                logger.debug('%d of %s were published.' %
+                             (len(lg.layers), len(indexed)))
 
                 if len(unpublished) > 0:
                     this_model['unpublished'] = unpublished
@@ -147,34 +171,34 @@ class ModelRegister(Observable):
         logger.debug('Done checking for layer groups in GeoServer.')
         return validation, errors
 
-    def do_work(self, name, workspace, path):
-        """
-        GSCONFIG - Python bindings are also available from gsconfig.py, but
-        there is no implementation of working with NetCDF files yet! So we are
-        using Requests to do the actual ingestion.
-
-        Adding a NetCDF coverage store
-        At the moment of writing, the NetCDF plugin supports datasets where each
-        variable’s axis is identified by an independent coordinate variable,
-        therefore two dimensional non-independent latitude-longitude coordinate
-        variables aren’t currently supported.
-
-        """
-        headers_json = {'content-type': 'application/json'}
-        headers_xml = {'content-type': 'text/xml'}
-        headers_zip = {'content-type': 'application/zip'}
-        headers_sld = {'content-type': 'application/vnd.ogc.sld+xml'}
+    # def do_work(self, name, workspace, path):
+    #     """
+    #     GSCONFIG - Python bindings are also available from gsconfig.py, but
+    #     there is no implementation of working with NetCDF files yet! So we are
+    #     using Requests to do the actual ingestion.
+    #
+    #     Adding a NetCDF coverage store
+    #     At the moment of writing, the NetCDF plugin supports datasets where each
+    #     variable’s axis is identified by an independent coordinate variable,
+    #     therefore two dimensional non-independent latitude-longitude coordinate
+    #     variables aren’t currently supported.
+    #
+    #     """
+    #     headers_json = {'content-type': 'application/json'}
+    #     headers_xml = {'content-type': 'text/xml'}
+    #     headers_zip = {'content-type': 'application/zip'}
+    #     headers_sld = {'content-type': 'application/vnd.ogc.sld+xml'}
 
         # COVERAGE STORES
         # http://geoserver.landscapefuelmoisture.bushfirebehaviour.net.au/geoserver/rest/workspaces/lfmc/coveragestores
 
-        r_create_coveragestore = requests.post(
-            'http://geoserver:8080/geoserver/rest/workspaces/lfmc/coveragestores?configure=all',
-            auth=('admin', 'geoserver'),
-            data='<coverageStore><name>' + name + '</name><workspace>' + workspace +
-                 '</workspace><enabled>true</enabled><type>NetCDF</type><url>' +
-            path + '</url></coverageStore>',
-            headers=headers_xml)
+        # r_create_coveragestore = requests.post(
+        #     'http://geoserver:8080/geoserver/rest/workspaces/lfmc/coveragestores?configure=all',
+        #     auth=('admin', 'geoserver'),
+        #     data='<coverageStore><name>' + name + '</name><workspace>' + workspace +
+        #          '</workspace><enabled>true</enabled><type>NetCDF</type><url>' +
+        #     path + '</url></coverageStore>',
+        #     headers=headers_xml)
         #
         # if r_create_coveragestore.status_code == '200':
 

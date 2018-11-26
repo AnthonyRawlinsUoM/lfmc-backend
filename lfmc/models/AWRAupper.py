@@ -24,7 +24,7 @@ logger.setLevel(logging.DEBUG)
 logger.debug("logger set to DEBUG")
 
 
-class AWRAModel(Model):
+class AWRAModelUpper(Model):
 
     def __init__(self):
 
@@ -45,15 +45,25 @@ class AWRAModel(Model):
         HRUs differ in their aerodynamic control of evaporation and their interception capacities but the main difference\
          is in their degree of access to different soil layers. The AWRA-L model has three soil layers (upper: 0–10 cm, \
          lower: 10–100 cm, and deep: 1–6 m). The shallow rooted vegetation has access to subsurface soil moisture in the \
-         upper and lower soil stores only, while the deep rooted vegetation also has access to moisture in the deep store.")
+         upper and lower soil stores only, while the deep rooted vegetation also has access to moisture in the deep store.\
+         Upper Soil Moisture estimate represents the percentage of available water content in the top 10 cm of the soil \
+         profile. The maximum storage within the soil layer is calculated from the depth of the soil and the relative \
+         soil water storage capacity . The soil properties that control the storage of water are derived from the \
+         continental scale mapping within Australian Soil Resources Information System (ASRIS) (Johnston et al., 2003).\
+         Pedotransfer functions are used to relate soil hydraulic properties to soil textural class. Soil drainage and \
+         moisture dynamics are then based on water balance considerations for each soil layer. This upper soil layer is\
+         the primary source of soil evaporation. The relative available water capacity of the upper soil layer is derived \
+         from ASRIS information as the available water capacity of a layer divided by its thickness. Actual soil moisture \
+         grids estimate the percentage of available water content rather than total soil water volume. Relative soil moisture \
+         grids, like the other grids, represent the long term deciles")
 
         self.metadata = ModelMetaData(authors=authors, published_date=pub_date, fuel_types=["surface"],
                                       doi="http://dx.doi.org/10.1016/j.rse.2015.12.010", abstract=abstract)
 
         self.path = os.path.abspath(Model.path() + 'AWRA-L') + '/'
-        self.ident = "Australian Landscape Water Balance"
-        self.name = "AWRA-L"
-        self.code = "AWRA"
+        self.ident = "Australian Landscape Water Balance (Upper Zone)"
+        self.name = "AWRA-L-U"
+        self.code = "AWRA_UPPER"
         self.outputs = {
             "type": "soil moisture",
             "readings": {
@@ -71,11 +81,11 @@ class AWRAModel(Model):
         """
         Pattern matches potential paths where files could be stored to those that actually exist.
         Warning: Files outside this directory aren't indexed and won't get ingested.
-        :param fname:
-        :return:
+        : param fname:
+        : return:
         """
         possibles = [p for p in glob.glob(
-            self.path + "s0_pct_*_Actual_day.nc")]
+            self.path + self.outputs['readings']['prefix'] + "_*_Actual_day.nc")]
         return [f for f in possibles if Path(f).is_file()]
 
     # ShapeQuery
