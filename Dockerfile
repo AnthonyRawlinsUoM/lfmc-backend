@@ -17,16 +17,17 @@ RUN conda install -y geopandas cartopy aiohttp
 RUN pip install regionmask
 RUN pip install rx aiohttp_cors
 RUN pip install httplib2 geojson
-RUN pip install redis
 RUN pip install tabulate
+RUN pip install celery
+RUN pip install redis==2.10.6
+RUN pip install flower
 
-ADD lfmc /lfmc
-ADD LFMCServer.py /
-ADD logviewer.sh /
+ADD serve /serve
+ADD log.sh /
 ADD .netrc /root/.netrc
 
-RUN mkdir /FuelModels
-RUN chown 1000:1000 /FuelModels
+RUN mkdir -p /FuelModels
+# RUN chown 1000:1000 /FuelModels
 
 EXPOSE 8002
-ENTRYPOINT ["hug", "-f", "/LFMCServer.py", "-p", "8002"]
+ENTRYPOINT ["hug", "-f", "serve/server.py", "-p", "8002"]
