@@ -1,3 +1,4 @@
+import asyncio
 import glob
 import os
 import os.path
@@ -88,7 +89,7 @@ class AWRAModelUpper(Model):
         return [f for f in possibles if Path(f).is_file()]
 
     # ShapeQuery
-    def get_shaped_resultcube(self, shape_query: ShapeQuery) -> xr.DataArray:
+    async def get_shaped_resultcube(self, shape_query: ShapeQuery) -> xr.DataArray:
         fs = list(set([self.netcdf_name_for_date(when)
                        for when in shape_query.temporal.dates()]))
         ts = xr.open_mfdataset(fs, chunks={'time': 1})
@@ -98,10 +99,10 @@ class AWRAModelUpper(Model):
 
         return ts
 
-    def get_shaped_timeseries(self, query: ShapeQuery) -> ModelResult:
+    async def get_shaped_timeseries(self, query: ShapeQuery) -> ModelResult:
         print(
             "\n--->>> Shape Query Called successfully on %s Model!! <<<---" % self.name)
-        sr = self.get_shaped_resultcube(query)
+        sr = await (self.get_shaped_resultcube(query))
         sr.load()
         var = self.outputs['readings']['prefix']
         dps = []

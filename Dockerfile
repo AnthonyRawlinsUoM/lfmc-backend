@@ -3,6 +3,8 @@ FROM continuumio/anaconda3
 LABEL maintainer="Anthony Rawlins <anthony.rawlins@unimelb.edu.au>"
 COPY ./sources.list /etc/apt/sources.list
 
+ENV TZ Australia/Melbourne
+
 RUN apt-get update
 RUN apt-get install -y build-essential
 RUN apt-get install -y nano
@@ -24,10 +26,14 @@ RUN pip install flower
 
 ADD serve /serve
 ADD log.sh /
-ADD .netrc /root/.netrc
 
+# User & Permissions
+RUN addgroup --gid 1024 dockerdata
+RUN adduser --home /home/dockeruser --disabled-password --gecos "" --ingroup dockerdata dockeruser 
+ADD .netrc /home/dockeruser/.netrc
 RUN mkdir -p /FuelModels
-# RUN chown 1000:1000 /FuelModels
+RUN chown :dockerdata /FuelModels
+USER dockeruser
 
 EXPOSE 8002
 ENTRYPOINT ["hug", "-f", "serve/server.py", "-p", "8002"]

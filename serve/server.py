@@ -2,7 +2,7 @@
 
 import hug
 import asyncio
-
+import base64
 from marshmallow import fields, pprint
 from rx import Observer
 from rx import Observable
@@ -15,8 +15,6 @@ from serve.lfmc.results.ModelResult import ModelResultSchema
 from serve.lfmc.models.ModelRegister import ModelRegister, ModelsRegisterSchema
 
 from serve.facade import do_query
-from serve.facade import get_query_status
-from serve.facade import get_result
 from serve.facade import log_error
 
 import uuid
@@ -62,6 +60,7 @@ content_output = hug.output_format.on_content_type(
 app = Celery('facade',
              backend='redis://caching:6379/0',
              broker='redis://caching:6379/0')
+app.Task.resultrepr_maxsize = 2000
 
 logger.debug(app)
 
@@ -71,11 +70,11 @@ def revoke(uuid):
     app.control.revoke(uuid)
 
 
-@hug.cli()
-@api.get('/validate', versions=range(1, 2))
-def validate():
-    mr = ModelRegister()
-    return mr.validate_catalog()
+# @hug.cli()
+# @api.get('/validate', versions=range(1, 2))
+# def validate():
+#     mr = ModelRegister()
+#     return mr.validate_catalog()
 
 
 @hug.cli()
@@ -188,19 +187,11 @@ def model_codes():
 #         query.logResponse()
 #         return tfile
 
-@hug.post('/result.json', versions=1)
+@hug.post('/result.json', versions=1, output=suffix_output)
 def result(uuid):
-    logger.debug(app)
     res = AsyncResult(uuid, app=app)
     if res.state == 'SUCCESS':
-        return json.loads(res.get())
-
-
-@hug.post('/test', versions=1)
-def test():
-    logger.debug(type(app))
-    f = log_error.delay("Testing")
-    return {'uuid': f.id}
+        return res.get()
 
 
 @hug.get('/submit_query.json', versions=1, output=suffix_output)
@@ -223,7 +214,6 @@ def submit_query(geo_json,
 
     res = final_result.delay()  # Removed 1 minute from now
 
-    logger.debug("Subtask result", res.children)
 # , 'model': r.model
     return [{'uuid': r.id} for r in res.children]
 
@@ -248,8 +238,7 @@ def get_progress(uuid):
         if res.successful():
             o = {
                 'id': res.id,
-                'STATE': res.state,  # PENDING, STARTED, RETRY, FAILURE, SUCCESS
-                'result': json.dumps(res.get())
+                'STATE': res.state  # PENDING, STARTED, RETRY, FAILURE, SUCCESS
             }
         else:
             o = {
@@ -371,11 +360,11 @@ if __name__ == '__main__':
     app.start()
     get_hostname.interface.cli()
     fuel_json.interface.cli()
-    fuel_mp4.interface.cli()
-    fuel_nc.interface.cli()
+    # fuel_mp4.interface.cli()
+    # fuel_nc.interface.cli()
     get_models.interface.cli()
-    monitors.interface.cli()
-    monitor_processes.interface.cli()
-    monitor_all_requests.interface.cli()
-    monitor_active_requests.interface.cli()
-    monitor_complete_requests.interface.cli()
+    # monitors.interface.cli()
+    # monitor_processes.interface.cli()
+    # monitor_all_requests.interface.cli()
+    # monitor_active_requests.interface.cli()
+    # monitor_complete_requests.interface.cli()

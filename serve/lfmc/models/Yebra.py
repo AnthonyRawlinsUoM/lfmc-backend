@@ -81,7 +81,7 @@ Characteristic plot method of 0.70, 0.78 and 0.71, respectively, indicating reas
         self.outputs = {
             "type": "fuel moisture",
             "readings": {
-                "prefix": "lvmc_mean",
+                "prefix": "fmc_mean",
                 "path": self.output_path,
                 "suffix": ".nc"
             }
@@ -112,7 +112,7 @@ Characteristic plot method of 0.70, 0.78 and 0.71, respectively, indicating reas
     async def mpg(self, query: ShapeQuery):
         sr = await (self.get_shaped_resultcube(query))
         logger.debug(sr)
-        mp4 = await (MPEGFormatter.format(sr, "lvmc_mean"))
+        mp4 = await (MPEGFormatter.format(sr, "fmc_mean"))
         asyncio.sleep(1)
         return mp4
 
@@ -127,7 +127,7 @@ Characteristic plot method of 0.70, 0.78 and 0.71, respectively, indicating reas
         if len(fs) == 1:
             with xr.open_dataset(*fs) as ds:
                 ds = xr.decode_cf(ds)
-                ds.attrs['var_name'] = "lvmc_mean"
+                ds.attrs['var_name'] = "fmc_mean"
                 tr = ds.sel(time=slice(shape_query.temporal.start.strftime("%Y-%m-%d"),
                                        shape_query.temporal.finish.strftime("%Y-%m-%d")))
                 return tr
@@ -135,7 +135,7 @@ Characteristic plot method of 0.70, 0.78 and 0.71, respectively, indicating reas
         elif len(fs) > 1:
             with xr.open_mfdataset(*fs) as ds:
                 ds = xr.decode_cf(ds)
-                ds.attrs['var_name'] = "lvmc_mean"
+                ds.attrs['var_name'] = "fmc_mean"
                 ts = ds.sel(time=slice(shape_query.temporal.start.strftime("%Y-%m-%d"),
                                        shape_query.temporal.finish.strftime("%Y-%m-%d")))
 
