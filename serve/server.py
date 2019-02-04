@@ -16,6 +16,7 @@ from serve.lfmc.models.ModelRegister import ModelRegister, ModelsRegisterSchema
 
 from serve.facade import do_query
 from serve.facade import log_error
+from serve.facade import consolidate
 
 import uuid
 import numpy as np
@@ -207,22 +208,12 @@ def submit_query(geo_json,
 
     HUG then handles formatting the result as a json object.
     """
-    # logger.debug(start, finish, models, geo_json)
-
     final_result = group(
         [do_query.s(geo_json, start, finish, model) for model in models])
 
     res = final_result.delay()  # Removed 1 minute from now
 
-# , 'model': r.model
     return [{'uuid': r.id} for r in res.children]
-
-    # logger.debug(type(res))
-    #
-    # if res.ready() and res.successful():
-    #     return res.get()
-    # else:
-    #     return {"http://api.landscapefuelmoisture.bushfirebehaviour.net.au/v1/progress.json?id=%s" % (res.id)}
 
 
 @hug.get('/progress.json', versions=1)
@@ -323,6 +314,14 @@ def handle_exception(exception):
 
 
 @hug.cli()
+@hug.get('/consolidate', versions=range(1, 2))
+def consolidation():
+    res = AsyncResult(consolidate(2019), app=app)
+    if res.state == 'SUCCESS':
+        return res.get()
+
+
+@hug.cli()
 @api.urls('/hostname', versions=range(1, 2))
 def get_hostname():
     return os.uname()[1]
@@ -360,11 +359,4 @@ if __name__ == '__main__':
     app.start()
     get_hostname.interface.cli()
     fuel_json.interface.cli()
-    # fuel_mp4.interface.cli()
-    # fuel_nc.interface.cli()
     get_models.interface.cli()
-    # monitors.interface.cli()
-    # monitor_processes.interface.cli()
-    # monitor_all_requests.interface.cli()
-    # monitor_active_requests.interface.cli()
-    # monitor_complete_requests.interface.cli()

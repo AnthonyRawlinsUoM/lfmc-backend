@@ -94,7 +94,7 @@ class Model:
         print("\n--> Expanding: %s" % archive_file)
         try:
             if str(archive_file).endswith('.Z'):
-                subprocess.run(['uncompress', '-k', archive_file],
+                subprocess.run(['gunzip', '-k', archive_file],
                                shell=False, check=True)
                 # await asyncio.create_subprocess_shell('uncompress -k %s' % archive_file)
             else:
@@ -107,6 +107,8 @@ class Model:
         except OSError as e:
             print("\n--> Removing: %s, was not necessary.\n %s" %
                   (archive_file, e))
+        finally:
+            print('Expansion attempt complete.')
         return True
 
     @staticmethod

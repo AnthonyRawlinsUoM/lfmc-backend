@@ -26,6 +26,7 @@ app = Celery('facade',
 
 app.Task.resultrepr_maxsize = 2000
 
+
 @app.task(trail=True)
 def do_query(geo_json, start, finish, model):
     result = {}
@@ -45,6 +46,15 @@ def do_query(geo_json, start, finish, model):
     mrs = ModelResultSchema()
     json_result, errors = mrs.dump(result)
     return json_result
+
+
+@app.task
+def consolidate(year):
+    mr = ModelRegister()
+    model = mr.get('DFMC')
+    looped = asyncio.new_event_loop()
+    result = looped.run_until_complete(model.consolidate_year(year))
+    return True
 
 
 @app.task

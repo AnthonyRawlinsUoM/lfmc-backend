@@ -20,6 +20,7 @@ from serve.lfmc.query.ShapeQuery import ShapeQuery
 from serve.lfmc.query.GeoQuery import GeoQuery
 from serve.lfmc.query.SpatioTemporalQuery import SpatioTemporalQuery
 import pickle
+import regionmask
 
 import matplotlib.pyplot as plt
 import logging
@@ -257,8 +258,11 @@ class DeadFuelModel(Model):
     #     return ModelResult(model_name=self.name, data_points=dps)
 
     def consolidate_year(self, y):
+        with open(Model.path() + 'australia.pickle', 'rb') as pickled_australia:
+            australia = pickle.load(pickled_australia)
 
-        AUmask = pickle.load('australia.pickle')
+        AUmask = regionmask.Regions_cls(
+            'AUmask', [0], ['Australia'], ['AU'], [australia.polygon])
 
         for year in range(y, y + 1):
             with xr.open_mfdataset("%s%s_%s*" % (self.outputs['readings']['path'], self.outputs['readings']['prefix'], year), chunks={'time': 1}) as ds:
@@ -336,9 +340,7 @@ class DeadFuelModel(Model):
                 logger.debug("\n------> Wrote: %s" % tempfile)
                 logger.debug(DFMC)
 
-            # Combine all inputs with outputs in single netcdf
             param_datasets.append(tempfile)
-            # with xr.open_mfdataset(param_datasets) as combined:
 
             with xr.open_mfdataset(tempfile) as combined:
                 # DFMC.coords['time'] = [dt.datetime(int(y), int(m), int(d))]
@@ -415,7 +417,7 @@ class DeadFuelModel(Model):
 
                         if await self.do_download(param["url"], resource, archive_file):
                             if await self.do_expansion(archive_file):
-                                parameter_dataset_name = await self.do_conversion(
+                                parameter_dataset_name = self.do_conversion(
                                     data_file, param, when)
 
                 except URLError as e:

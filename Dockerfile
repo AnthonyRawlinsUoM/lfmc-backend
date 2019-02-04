@@ -24,16 +24,19 @@ RUN pip install celery
 RUN pip install redis==2.10.6
 RUN pip install flower
 
-ADD serve /serve
+
 ADD log.sh /
 
-# User & Permissions
-RUN addgroup --gid 1024 dockerdata
-RUN adduser --home /home/dockeruser --disabled-password --gecos "" --ingroup dockerdata dockeruser 
-ADD .netrc /home/dockeruser/.netrc
 RUN mkdir -p /FuelModels
-RUN chown :dockerdata /FuelModels
-USER dockeruser
+
+RUN groupadd -g 1000 dockergroup
+RUN useradd --create-home -s /bin/bash -r -u 1000 -g 1000 dockeruser
+WORKDIR /home/dockeruser
+
+RUN chown 1000:1000 /FuelModels
+ADD .netrc /home/dockeruser/.netrc
+ADD serve /home/dockeruser/serve
+USER 1000
 
 EXPOSE 8002
-ENTRYPOINT ["hug", "-f", "serve/server.py", "-p", "8002"]
+ENTRYPOINT ["hug", "-f", "/home/dockeruser/serve/server.py", "-p", "8002"]
