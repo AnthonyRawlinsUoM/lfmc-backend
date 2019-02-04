@@ -7,7 +7,7 @@ IMAGE=lfmc-backend
 git pull
 
 # bump version
-docker run --rm -v "$PWD":/app treeder/bump release
+docker run --rm -v "$PWD":/app treeder/bump bump
 version=`cat VERSION`
 echo "version: $version"
 
