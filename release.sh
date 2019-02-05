@@ -4,7 +4,7 @@ USERNAME=anthonyrawlinsuom
 IMAGE=lfmc-backend
 
 # ensure we're up to date
-git pull
+#git pull
 
 # bump version
 docker run --rm -v "$PWD":/app treeder/bump release

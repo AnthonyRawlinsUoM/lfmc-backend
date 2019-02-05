@@ -72,7 +72,7 @@ Characteristic plot method of 0.70, 0.78 and 0.71, respectively, indicating reas
         self.ident = "Yebra"
         self.code = "LVMC"
         self.path = os.path.abspath(Model.path() + 'Yebra') + '/'
-        self.output_path = os.path.abspath(self.path + "LVMC") + '/'
+        self.output_path = os.path.abspath(self.path + "c6") + '/'
         self.data_path = self.output_path
 
         # Metadata about initialisation for use in ModelSchema
@@ -93,12 +93,12 @@ Characteristic plot method of 0.70, 0.78 and 0.71, respectively, indicating reas
         Warning: Files outside this directory aren't indexed and won't get ingested.
         :return:
         """
-        possibles = [p for p in glob.glob(self.path + "australia_LVMC_*.nc")]
+        possibles = [p for p in glob.glob(self.path + "fmc_c6_*.nc")]
         return [f for f in possibles if Path(f).is_file()]
 
     def netcdf_name_for_date(self, when):
         fname = self.output_path + \
-            "australia_LVMC_{}.nc".format(when.strftime("%Y"))
+            "fmc_c6_{}.nc".format(when.strftime("%Y"))
         logger.debug(fname)
         return fname
 
