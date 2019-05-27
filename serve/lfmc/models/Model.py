@@ -91,10 +91,13 @@ class Model:
 
     @staticmethod
     async def do_expansion(archive_file):
+
+        archive_file = str(archive_file)
+
         print("\n--> Expanding: %s" % archive_file)
         try:
-            if str(archive_file).endswith('.Z'):
-                subprocess.run(['gunzip', '-k', str(archive_file)],
+            if archive_file.endswith('.Z'):
+                subprocess.run(['gunzip', '-k', archive_file],
                                shell=False, check=True)
                 # await asyncio.create_subprocess_shell('uncompress -k %s' % archive_file)
             else:
