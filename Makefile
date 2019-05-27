@@ -1,8 +1,8 @@
 all: build install pull
 
 stack:
-	@docker build --tag=127.0.0.1:5000/lfmc-backend .
-	@docker push 127.0.0.1:5000/lfmc-backend
+	@docker build --tag=anthonyrawlinsuom/lfmc-backend .
+	@docker push anthonyrawlinsuom/lfmc-backend
 	
 build:
 	@docker build --tag=anthonyrawlinsuom/lfmc-backend .

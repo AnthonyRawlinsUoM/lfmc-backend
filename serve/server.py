@@ -8,7 +8,7 @@ from rx import Observer
 from rx import Observable
 
 from serve.lfmc.models.Model import ModelSchema
-from serve.lfmc.process.Conversion import Conversion
+
 from serve.lfmc.query.ShapeQuery import ShapeQuery
 from serve.lfmc.results import ModelResult
 from serve.lfmc.results.ModelResult import ModelResultSchema
@@ -17,6 +17,7 @@ from serve.lfmc.models.ModelRegister import ModelRegister, ModelsRegisterSchema
 from serve.facade import do_query
 from serve.facade import log_error
 from serve.facade import consolidate
+from serve.facade import do_conversion
 
 import uuid
 import numpy as np
@@ -348,11 +349,18 @@ def get_model(name):
     return resp
 
 
-@hug.post('/convert.json', versions=range(1, 2), content_output=hug.output_format.file)
-async def get_converted_shapefile(shp: str):
-    logger.debug('Got conversion request: ' + shp)
-    resp = Conversion.convert_this(shp)
-    return resp
+@hug.post('/convert.json', versions=range(1, 2))
+def convert_this_shapefile(shp: str):
+    final_result = do_conversion.s(shp)
+    r = final_result.delay()
+    return {'uuid': r.id}
+
+
+@hug.get('/converted_shape.json', versions=range(2, 2), content_output=hug.output_format.file)
+def get_converted_shape(uuid):
+    res = AsyncResult(uuid, app=app)
+    if res.state == 'SUCCESS':
+        return res.get()
 
 
 if __name__ == '__main__':

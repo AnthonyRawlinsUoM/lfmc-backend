@@ -8,6 +8,8 @@ from serve.lfmc.query.ShapeQuery import ShapeQuery
 from serve.lfmc.models.ModelRegister import ModelRegister
 from serve.lfmc.results import ModelResult
 from serve.lfmc.results.ModelResult import ModelResultSchema
+from serve.lfmc.process.Conversion import Conversion
+
 import time
 import json
 import asyncio
@@ -48,20 +50,25 @@ def do_query(geo_json, start, finish, model):
     return json_result
 
 
-@app.task
+@app.task(trail=True)
 def consolidate(year):
     mr = ModelRegister()
     model = mr.get('DFMC')
     looped = asyncio.new_event_loop()
     result = looped.run_until_complete(model.consolidate_year(year))
-    return True
+    return result
 
 
-@app.task
+@app.task(trail=True)
 def log_error(e):
     logger.warning(e)
     print(e)
 
+
+@app.task(trail=True)
+def do_conversion(shp):
+    logger.debug('Got conversion request: ' + shp)
+    return Conversion.convert_this(shp)
 
 # if __name__ == '__main__':
 #     ModelFacade.create_models()

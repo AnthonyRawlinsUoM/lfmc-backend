@@ -106,8 +106,8 @@ class JasminModel(Model):
     async def get_shaped_resultcube(self, shape_query: ShapeQuery) -> xr.DataArray:
 
         sr = None
-        fs = self.netcdf_names_for_dates(
-            shape_query.temporal.start, shape_query.temporal.finish)
+        fs = list(set(self.netcdf_names_for_dates(
+            shape_query.temporal.start, shape_query.temporal.finish)))
         if dev.DEBUG:
             logger.debug('{}\n'.format(f) for f in fs)
         asyncio.sleep(1)

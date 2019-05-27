@@ -69,35 +69,7 @@ class LiveFuelModel(Model):
         self.path = os.path.abspath(Model.path() + 'Live_FM') + '/'
         self.ident = "Live Fuels"
         self.code = "LFMC"
-        self.parameters = {
-            "surface relectance band 1": {
-                "var": "sur_refl_1",
-                "path": "",
-                "url": "",
-                "prefix": "SRB1",
-                "suffix": ".hdf",
-                "dataset": ".hdf",
-                "compression_suffix": ".gz"
-            },
-            "surface relectance band 3": {
-                "var": "sur_refl_3",
-                "path": "",
-                "url": "",
-                "prefix": "SRB3",
-                "suffix": ".hdf",
-                "dataset": ".hdf",
-                "compression_suffix": ".gz"
-            },
-            "surface relectance band 4": {
-                "var": "sur_refl_4",
-                "path": "",
-                "url": "",
-                "prefix": "SRB4",
-                "suffix": ".hdf",
-                "dataset": ".hdf",
-                "compression_suffix": ".gz"
-            }
-        }
+
         self.outputs = {
             "type": "fuel moisture",
             "readings": {
@@ -107,14 +79,6 @@ class LiveFuelModel(Model):
                 "suffix": ".nc",
             }
         }
-
-        # self.storage_engine = SwiftStorage()
-        # {"parameters": self.parameters, "outputs": self.outputs})
-
-    # @deprecated
-    # def check_for_netrc(self):
-    #     cmdline("cat /home/arawlins/.netrc")
-    #
 
     def netcdf_name_for_date(self, when):
         return "{}{}_{}{}".format(self.outputs["readings"]["path"],
@@ -243,7 +207,7 @@ class LiveFuelModel(Model):
             'thefile': fobj
         }
         r = requests.post(
-            url='http://transformr.landscapefuelmoisture.bushfirebehaviour.net.au/modis_to_ncdf', data=data)
+            url='http://transformr:8000/modis_to_ncdf', data=data)
         name = fobj.split('.')[-1] + '.nc'
 
         if r.status_code == 200:

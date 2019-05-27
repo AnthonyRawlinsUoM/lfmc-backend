@@ -133,6 +133,7 @@ Characteristic plot method of 0.70, 0.78 and 0.71, respectively, indicating reas
                 return tr
 
         elif len(fs) > 1:
+            fs = list(set(fs))
             with xr.open_mfdataset(*fs) as ds:
                 ds = xr.decode_cf(ds)
                 ds.attrs['var_name'] = "fmc_mean"
