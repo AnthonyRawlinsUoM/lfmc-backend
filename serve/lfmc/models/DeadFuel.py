@@ -147,6 +147,15 @@ class DeadFuelModel(Model):
         #     {"parameters": self.parameters, "outputs": self.outputs})
 
     def netcdf_name_for_date(self, when):
+
+        archive_file = "{}{}_{}{}".format(self.path,
+                                          self.outputs["readings"]["prefix"],
+                                          when.strftime("%Y"),
+                                          self.outputs["readings"]["suffix"])
+
+        if Path(archive_file).is_file():
+            return archive_file
+
         return "{}{}_{}{}".format(self.outputs["readings"]["path"],
                                   self.outputs["readings"]["prefix"],
                                   when.strftime("%Y%m%d"),
@@ -194,14 +203,22 @@ class DeadFuelModel(Model):
     async def get_shaped_resultcube(self, shape_query: ShapeQuery) -> xr.DataArray:
         sr = None
         fs = await asyncio.gather(*[self.dataset_files(when) for when in shape_query.temporal.dates()])
-        fs = [f for f in fs if (f is not None and Path(f).is_file())]
+        fs = list(
+            set([f for f in fs if (f is not None and Path(f).is_file())]))
+
         asyncio.sleep(1)
         if len(fs) > 0:
-            with xr.open_mfdataset(fs) as ds:
+            logger.debug(fs)
+
+            with xr.open_mfdataset(fs, concat_dim='time') as ds:
+
                 if "observations" in ds.dims:
                     sr = ds.squeeze("observations")
-            sr = sr.sel(time=slice(shape_query.temporal.start.strftime("%Y-%m-%d"),
-                                   shape_query.temporal.finish.strftime("%Y-%m-%d")))
+                else:
+                    sr = ds
+                logger.debug(sr)
+                sr = sr.sel(time=slice(shape_query.temporal.start.strftime("%Y-%m-%d"),
+                                       shape_query.temporal.finish.strftime("%Y-%m-%d")))
 
             return sr
         else:
@@ -257,7 +274,7 @@ class DeadFuelModel(Model):
     #            for t in range(0, len(sr["time"]))]
     #     return ModelResult(model_name=self.name, data_points=dps)
 
-    def consolidate_year(self, y):
+    async def consolidate_year(self, y):
         with open(Model.path() + 'australia.pickle', 'rb') as pickled_australia:
             australia = pickle.load(pickled_australia)
 
@@ -289,6 +306,7 @@ class DeadFuelModel(Model):
                 logger.debug(ds[self.outputs['readings']['prefix']])
                 ds.to_netcdf("%s%s_%s.nc" %
                              (self.path, self.outputs['readings']['prefix'], year))
+        return True
 
     @staticmethod
     def do_conversion(file_name, param, when):
