@@ -124,6 +124,13 @@ class LiveFuelModel(Model):
         v = int(hv_component[1])
         return h, v
 
+    def date_for_modis_granule(self, granule):
+        """ Extracts the observation date from the naming conventions of a HDF-EOS file"""
+        # unravel naming conventions
+        parts = granule.split('.')
+        # set the key for subgrouping to be the date of observation by parsing the Julian Date
+        return dt.datetime.strptime((parts[1].replace('A', '')), '%Y%j')
+
     async def dataset_files(self, start, finish, bbox):
         """
         Uses USGS service to match spatiotemporal query to granules required.
