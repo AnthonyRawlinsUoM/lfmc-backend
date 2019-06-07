@@ -319,7 +319,7 @@ def handle_exception(exception):
 def consolidation():
     res = AsyncResult(consolidate(2019), app=app)
     if res.state == 'SUCCESS':
-        return res.get()
+        return "OK"
 
 
 @hug.cli()

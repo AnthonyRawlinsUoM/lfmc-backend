@@ -302,8 +302,10 @@ class DeadFuelModel(Model):
                     'long_name'] = 'Dead Fine Fuels Moisture Content - (Percentage wet over dry by weight)'
                 ds['DFMC'].attrs['name'] = self.outputs['readings']['prefix']
                 ds['DFMC'].attrs['standard_name'] = self.outputs['readings']['prefix']
-                logger.debug(ds)
-                logger.debug(ds[self.outputs['readings']['prefix']])
+
+                # logger.debug(ds)
+                # logger.debug(ds[self.outputs['readings']['prefix']])
+
                 ds.to_netcdf("%s%s_%s.nc" %
                              (self.path, self.outputs['readings']['prefix'], year))
         return True
