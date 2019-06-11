@@ -32,7 +32,7 @@ import logging
 logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-logger.debug("logger set to DEBUG")
+print("logger set to DEBUG")
 
 
 class LiveFuelModel(Model):
@@ -92,7 +92,7 @@ class LiveFuelModel(Model):
         return [f for f in possibles if Path(f).is_file()]
 
     async def get_inventory_for_request(self, url_string):
-        logger.debug('Getting %s' % url_string)
+        print('Getting %s' % url_string)
         r = requests.get(url_string)
         queue = []
         if r.status_code == 200:
@@ -161,7 +161,7 @@ class LiveFuelModel(Model):
         # all_ok = await asyncio.gather(*[self.retrieve_earth_observation_data(
         #     v) for k, v in dfiles if not Path(k).is_file()])
 
-        logger.debug(dfiles)
+        print(dfiles)
         return [k for k, v in dfiles if Path(k).is_file()]
 
     # ShapeQuery
@@ -169,20 +169,20 @@ class LiveFuelModel(Model):
     async def get_shaped_resultcube(self, shape_query: ShapeQuery) -> xr.DataArray:
         sr = None
         lat1, lon1, lat2, lon2 = shape_query.spatial.expanded(1.0)
-        # logger.debug('BL: %3.3f, %3.3f' % (lon1, lat1))
-        # logger.debug('TR: %3.3f, %3.3f' % (lon2, lat2))
+        # print('BL: %3.3f, %3.3f' % (lon1, lat1))
+        # print('TR: %3.3f, %3.3f' % (lon2, lat2))
         # Eg., "108.0000,-45.0000,155.0000,-10.0000"  # Bottom-left, top-right
         bbox = "%3.3f,%3.3f,%3.3f,%3.3f" % (lon1, lat1, lon2, lat2)
-        # logger.debug("%s" % bbox)
+        # print("%s" % bbox)
 
         collection = await self.dataset_files(shape_query.temporal.start, shape_query.temporal.finish, bbox)
 
-        logger.debug('Files to open are...')
+        print('Files to open are...')
         flat_list = list(
             set([item for sublist in collection for item in sublist]))
         fs = [self.outputs['readings']['path'] + "/" + f for f in flat_list if Path(
             self.outputs['readings']['path'] + "/" + f).is_file()]
-        logger.debug(fs)
+        print(fs)
 
         asyncio.sleep(1)
         if len(fs) > 0:
@@ -193,34 +193,34 @@ class LiveFuelModel(Model):
                     sr = ds
             return sr
         else:
-            logger.debug("No files available/gathered for that space/time.")
+            print("No files available/gathered for that space/time.")
             return xr.DataArray([])
 
     async def get_shaped_timeseries(self, query: ShapeQuery) -> ModelResult:
-        logger.debug(
+        print(
             "\n--->>> Shape Query Called successfully on %s Model!! <<<---" % self.name)
         sr = await (self.get_shaped_resultcube(query))
         sr.load()
         var = self.outputs['readings']['prefix']
         dps = []
         try:
-            logger.debug('Trying to find datapoints.')
+            print('Trying to find datapoints.')
             geoQ = GeoQuery(query)
             dps = geoQ.cast_fishnet({'init': 'EPSG:3577'}, sr[var])
-            logger.debug(dps)
+            print(dps)
 
         except FileNotFoundError:
-            logger.debug('Files not found for date range.')
+            print('Files not found for date range.')
         except ValueError as ve:
-            logger.debug(ve)
+            print(ve)
         except OSError as oe:
-            logger.debug(oe)
+            print(oe)
         except KeyError as ke:
-            logger.debug(ke)
+            print(ke)
 
         if len(dps) == 0:
-            logger.debug('Found no datapoints.')
-            logger.debug(sr)
+            print('Found no datapoints.')
+            print(sr)
 
         asyncio.sleep(1)
 

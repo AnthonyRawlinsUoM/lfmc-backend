@@ -38,7 +38,7 @@ import logging
 logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-logger.debug("logger set to DEBUG")
+print("logger set to DEBUG")
 
 
 class ShapeQuery(SpatialQuery, TemporalQuery):
@@ -63,8 +63,8 @@ class ShapeQuery(SpatialQuery, TemporalQuery):
             self.geo_json = geo_json
 
         else:
-            logger.debug("Couldn't parse GeoJSON.")
-            # logger.debug("We got:", type(geo_json))
+            print("Couldn't parse GeoJSON.")
+            # print("We got:", type(geo_json))
             raise ValueError("Couldn't parse GeoJSON: " + geo_json)
 
         lon1 = 180
@@ -90,9 +90,9 @@ class ShapeQuery(SpatialQuery, TemporalQuery):
             lon1 = min(min_lon, lon1)
             lon2 = max(max_lon, lon2)
 
-            logger.debug("Found a Feature.")
+            print("Found a Feature.")
             if p["geometry"]["type"] == "Polygon" or p["geometry"]["type"] == "MultiPolygon":
-                logger.debug("Found Polygon/MultiPolygon #%s" % count)
+                print("Found Polygon/MultiPolygon #%s" % count)
                 s = shape(p["geometry"])
                 selections.append(s)
                 numbers.append(count)
@@ -100,17 +100,17 @@ class ShapeQuery(SpatialQuery, TemporalQuery):
                 abbrevs.append("SEL_%s" % count)
                 count += 1
 
-        logger.debug("Making Region Mask with %s Polygons." % count)
-        logger.debug("numbers: %s" % numbers)
-        logger.debug("names: %s" % names)
-        logger.debug("abbrevs: %s" % abbrevs)
-        logger.debug("selections: %s" % selections)
+        print("Making Region Mask with %s Polygons." % count)
+        print("numbers: %s" % numbers)
+        print("names: %s" % names)
+        print("abbrevs: %s" % abbrevs)
+        print("selections: %s" % selections)
 
         self.rmask = regionmask.Regions_cls(
             0, numbers, names, abbrevs, selections)
 
         self.selections = selections
-        logger.debug(["%s" % sel for sel in selections])
+        print(["%s" % sel for sel in selections])
 
         # Do once and store
         # self.mask = self.get_super_sampled_mask()  # TODO - remove default creation of mask and require setting the transform according to dataset projection
@@ -170,8 +170,8 @@ class ShapeQuery(SpatialQuery, TemporalQuery):
             hull = ConvexHull(points)
             return shapely.geometry.Polygon([hull.points[vertex] for vertex in hull.vertices])
         else:
-            logger.debug('HullError: Mask coords contain Nans.')
-            logger.debug('Points were: \n%s\n' % (list(points)))
+            print('HullError: Mask coords contain Nans.')
+            print('Points were: \n%s\n' % (list(points)))
             raise ValueError(
                 'Cannot make a hull around points that contain NaNs')
             return None
@@ -188,7 +188,7 @@ class ShapeQuery(SpatialQuery, TemporalQuery):
         # TODO
         affine = Affine(*self.transform)
         new_points = [~affine * point for point in asarray(poly.exterior)]
-        #     logger.debug(new_points)
+        #     print(new_points)
         return shapely.geometry.Polygon(new_points)
 
     def transform_to_latlong(self, poly):

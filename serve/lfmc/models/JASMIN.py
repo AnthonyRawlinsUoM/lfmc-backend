@@ -20,7 +20,7 @@ import logging
 logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-logger.debug("logger set to DEBUG")
+print("logger set to DEBUG")
 
 
 class JasminModel(Model):
@@ -109,7 +109,7 @@ class JasminModel(Model):
         fs = list(set(self.netcdf_names_for_dates(
             shape_query.temporal.start, shape_query.temporal.finish)))
         if dev.DEBUG:
-            logger.debug('{}\n'.format(f) for f in fs)
+            print('{}\n'.format(f) for f in fs)
         asyncio.sleep(1)
 
         if len(fs) > 0:
@@ -138,36 +138,36 @@ class JasminModel(Model):
             sr = ds.sel(time=slice(shape_query.temporal.start.strftime("%Y-%m-%d"),
                                    shape_query.temporal.finish.strftime("%Y-%m-%d")))
             if dev.DEBUG:
-                logger.debug(sr)
+                print(sr)
             return sr
         else:
             return xr.DataArray([])
 
     async def get_shaped_timeseries(self, query: ShapeQuery) -> ModelResult:
-        logger.debug(
+        print(
             "\n--->>> Shape Query Called successfully on %s Model!! <<<---" % self.name)
         sr = await (self.get_shaped_resultcube(query))
         sr.load()
         var = self.outputs['readings']['prefix']
         dps = []
         try:
-            logger.debug('Trying to find datapoints.')
+            print('Trying to find datapoints.')
             geoQ = GeoQuery(query)
             dps = geoQ.cast_fishnet({'init': 'EPSG:4326'}, sr[var])
-            logger.debug(dps)
+            print(dps)
 
         except FileNotFoundError:
-            logger.debug('Files not found for date range.')
+            print('Files not found for date range.')
         except ValueError as ve:
-            logger.debug(ve)
+            print(ve)
         except OSError as oe:
-            logger.debug(oe)
+            print(oe)
         except KeyError as ke:
-            logger.debug(ke)
+            print(ke)
 
         if len(dps) == 0:
-            logger.debug('Found no datapoints.')
-            logger.debug(sr)
+            print('Found no datapoints.')
+            print(sr)
 
         asyncio.sleep(1)
 

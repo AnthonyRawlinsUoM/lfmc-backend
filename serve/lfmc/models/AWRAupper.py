@@ -21,7 +21,7 @@ import logging
 logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-logger.debug("logger set to DEBUG")
+print("logger set to DEBUG")
 
 
 class AWRAModelUpper(Model):
@@ -111,7 +111,7 @@ class AWRAModelUpper(Model):
 
             geoQ = GeoQuery(query)
             dps = geoQ.cast_fishnet({'init': 'EPSG:3111'}, sr[var])
-            logger.debug(dps)
+            print(dps)
         except FileNotFoundError:
             print('Files not found for date range.')
         except ValueError as ve:

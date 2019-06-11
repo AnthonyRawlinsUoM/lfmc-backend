@@ -21,17 +21,17 @@ class GeoServer:
         ft = self.catalog.create_coveragestore(
             layer_name, workspace=ws, data=path_to_netcdf)
 
-        logger.debug('Retrieving Default Style')
+        print('Retrieving Default Style')
         ft.default_style = self.geo_server.get_style(
             'lfmc:{}'.format(layer_group))
 
-        # logger.debug('Retrieving Layer')
+        # print('Retrieving Layer')
         # fts = self.geo_server.get_layer(layer_name)
 
         # Add layer for coverage store
         timeInfo = DimensionInfo("time", "true", "LIST", None, "ISO8601", None)
         ft.metadata = ({'time': timeInfo})
-        logger.debug('Attempting to save new coveragestore')
+        print('Attempting to save new coveragestore')
         self.catalog.save(ft)
 
         # Add layer to layer group

@@ -23,7 +23,7 @@ import logging
 logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-logger.debug("logger set to DEBUG")
+print("logger set to DEBUG")
 
 
 class YebraModel(Model):
@@ -99,7 +99,7 @@ Characteristic plot method of 0.70, 0.78 and 0.71, respectively, indicating reas
     def netcdf_name_for_date(self, when):
         fname = self.output_path + \
             "fmc_c6_{}.nc".format(when.strftime("%Y"))
-        logger.debug(fname)
+        print(fname)
         return fname
 
     async def dataset_files(self, when):
@@ -111,7 +111,7 @@ Characteristic plot method of 0.70, 0.78 and 0.71, respectively, indicating reas
 
     async def mpg(self, query: ShapeQuery):
         sr = await (self.get_shaped_resultcube(query))
-        logger.debug(sr)
+        print(sr)
         mp4 = await (MPEGFormatter.format(sr, "fmc_mean"))
         asyncio.sleep(1)
         return mp4
@@ -122,7 +122,7 @@ Characteristic plot method of 0.70, 0.78 and 0.71, respectively, indicating reas
         ps = await asyncio.gather(*[self.dataset_files(when) for when in shape_query.temporal.dates()])
         [fs.add(f) for f in ps if (f is not None and Path(f).is_file())]
 
-        [logger.debug("Confirmed: %s" % f) for f in fs]
+        [print("Confirmed: %s" % f) for f in fs]
 
         if len(fs) == 1:
             with xr.open_dataset(*fs) as ds:
@@ -142,34 +142,34 @@ Characteristic plot method of 0.70, 0.78 and 0.71, respectively, indicating reas
 
                 return ts
         else:
-            logger.debug("No files available/gathered for that space/time.")
+            print("No files available/gathered for that space/time.")
 
             return xr.DataArray([])
 
     async def get_shaped_timeseries(self, query: ShapeQuery) -> ModelResult:
-        logger.debug(
+        print(
             "\n--->>> Shape Query Called successfully on %s Model!! <<<---" % self.name)
         sr = await (self.get_shaped_resultcube(query))
         sr.load()
         var = self.outputs['readings']['prefix']
         dps = []
         try:
-            logger.debug('Trying to find datapoints.')
+            print('Trying to find datapoints.')
 
             geoQ = GeoQuery(query)
             dps = geoQ.cast_fishnet({'init': 'EPSG:3577'}, sr[var])
-            logger.debug(dps)
+            print(dps)
 
         except FileNotFoundError:
-            logger.debug('Files not found for date range.')
+            print('Files not found for date range.')
         except ValueError as ve:
-            logger.debug(ve)
+            print(ve)
         except OSError as oe:
-            logger.debug(oe)
+            print(oe)
 
         if len(dps) == 0:
-            logger.debug('Found no datapoints.')
-            logger.debug(sr)
+            print('Found no datapoints.')
+            print(sr)
 
         asyncio.sleep(1)
 

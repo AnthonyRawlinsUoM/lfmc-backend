@@ -17,19 +17,19 @@ import logging
 logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-logger.debug("logger set to DEBUG")
+print("logger set to DEBUG")
 
 
 class BomBasedModel(Model):
 
     @abstractmethod
     def netcdf_name_for_date(self, when):
-        logger.debug("&&&&&&&&&&&&&&&&&&&&&&&&&&& called abstract ERGH!")
+        print("&&&&&&&&&&&&&&&&&&&&&&&&&&& called abstract ERGH!")
         return ['/tmp']  # DEBUG ONLY
 
     async def mpg(self, query: ShapeQuery):
         sr = await (self.get_shaped_resultcube(query))
-        logger.debug(sr)
+        print(sr)
         mp4 = await (MPEGFormatter.format(
             sr, self.outputs["readings"]["prefix"]))
         asyncio.sleep(1)
@@ -44,18 +44,18 @@ class BomBasedModel(Model):
 
         fs = set()
         for when in shape_query.temporal.dates():
-            # logger.debug("Looking for files for: %s in '%s'",
+            # print("Looking for files for: %s in '%s'",
             #             when.strftime('%d / %m / %Y'),
             #             self.netcdf_name_for_date(when))
             [fs.add(file) for file in self.netcdf_name_for_date(
                 when) if Path(file).is_file()]
 
-        [logger.debug('Found: %s', p) for p in fs]
+        [print('Found: %s', p) for p in fs]
 
         fl = list(fs)
         xr1 = xr.DataArray(())
         if dev.DEBUG:
-            [logger.debug("\n--> Will load: %s" % f) for f in fl]
+            [print("\n--> Will load: %s" % f) for f in fl]
 
         # Load these files in date order overwriting older data with the newer
         if len(fl) > 0:
@@ -64,7 +64,7 @@ class BomBasedModel(Model):
             while len(fl) > 1:
                 xr2 = xr.open_dataset(fl.pop(0))
                 # if dev.DEBUG:
-                #     logger.debug("\n--> Loading BOM SFC TS by overwriting older data: %s" % fl[0])
+                #     print("\n--> Loading BOM SFC TS by overwriting older data: %s" % fl[0])
                 xr1 = self.load_by_overwrite(xr1, xr2)
 
             xr1.attrs['var_name'] = self.outputs["readings"]["prefix"]
@@ -72,7 +72,7 @@ class BomBasedModel(Model):
 
             if dev.DEBUG:
                 # Include forecasts!
-                logger.debug(xr1)
+                print(xr1)
                 ts = xr1.sel(time=slice(
                     shape_query.temporal.start.strftime("%Y-%m-%d"), None))
             else:
@@ -117,15 +117,15 @@ class BomBasedModel(Model):
             while len(file_list) > 1:
                 xr2 = xr.open_dataset(file_list.pop(0))
                 # if dev.DEBUG:
-                #     logger.debug("\n--> Loading BOM SFC TS by overwriting older data: %s" % fl[0])
+                #     print("\n--> Loading BOM SFC TS by overwriting older data: %s" % fl[0])
                 xr1 = self.load_by_overwrite(xr1, xr2)
 
             xr1.attrs['var_name'] = self.outputs["readings"]["prefix"]
 
-            logger.debug(xr1)
+            print(xr1)
 
             if xr1['time'] is None:
-                logger.debug('No temporal component to DataSet?!')
+                print('No temporal component to DataSet?!')
                 return False
             else:
                 # This needs refinement to extract days worth of records instead of actual time entries
@@ -140,7 +140,7 @@ class BomBasedModel(Model):
                 #     return True
                 # else:
                 #     # Can't yet save the year as an archive it's incomplete
-                #     logger.debug('Attempted to create an annual archive for %s,'
+                #     print('Attempted to create an annual archive for %s,'
                 #           'but the year (%d) is incomplete, containing just %d records' % (self.code,
                 #                                                                            year,
                 #                                                                            len(time_records)))
@@ -201,29 +201,29 @@ class BomBasedModel(Model):
         return archives
 
     async def get_shaped_timeseries(self, query: ShapeQuery) -> ModelResult:
-        logger.debug(
+        print(
             "\n--->>> Shape Query Called successfully on %s Model!! <<<---" % self.name)
         sr = await (self.get_shaped_resultcube(query))
         sr.load()
         var = self.outputs['readings']['prefix']
         dps = []
         try:
-            logger.debug('Trying to find datapoints.')
+            print('Trying to find datapoints.')
 
             geoQ = GeoQuery(query)
             dps = geoQ.cast_fishnet({'init': 'EPSG:3111'}, sr[var])
-            logger.debug(dps)
+            print(dps)
 
         except FileNotFoundError:
-            logger.debug('Files not found for date range.')
+            print('Files not found for date range.')
         except ValueError as ve:
-            logger.debug(ve)
+            print(ve)
         except OSError as oe:
-            logger.debug(oe)
+            print(oe)
 
         if len(dps) == 0:
-            logger.debug('Found no datapoints.')
-            logger.debug(sr)
+            print('Found no datapoints.')
+            print(sr)
 
         asyncio.sleep(1)
 

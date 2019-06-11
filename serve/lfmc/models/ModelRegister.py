@@ -39,7 +39,7 @@ import logging
 logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-logger.debug("logger set to DEBUG")
+print("logger set to DEBUG")
 
 
 class ModelRegister:
@@ -87,18 +87,18 @@ class ModelRegister:
     #
     #         stores = ModelRegister.geo_server.catalog.get_stores(
     #             workspace='lfmc')
-    #         logger.debug(stores)
+    #         print(stores)
     #
     #         for coverage_store in stores:
     #             published_ncs.append(coverage_store.name)
-    #             logger.debug(coverage_store.name)
+    #             print(coverage_store.name)
     #             # coverage = self.geo_server.catalog.get_resources(store=coverage_store, workspace='lfmc')
-    #             # logger.debug(coverage)
+    #             # print(coverage)
     #             # for r in coverage:
-    #             #     logger.debug('Coverage Resource: ', r.title)
+    #             #     print('Coverage Resource: ', r.title)
     #
     #     except FailedRequestError as e:
-    #         logger.debug(e)
+    #         print(e)
     #
     #     for m in ModelRegister.models:
     #         # Ensure there's a layer for each NetCDF file held in the DataSources
@@ -109,7 +109,7 @@ class ModelRegister:
     #             lg = ModelRegister.geo_server.get_layer_group(
     #                 m.code)  # NB Not m.name, it's m.code!
     #         except FailedRequestError as e:
-    #             logger.debug(e)
+    #             print(e)
     #
     #         unpublished = []
     #
@@ -117,17 +117,17 @@ class ModelRegister:
     #             good_model = '\nModel: %s is published under LayerGroup: %s' % (
     #                 m, lg)
     #             this_model = {'validation': good_model}
-    #             logger.debug(this_model)
+    #             print(this_model)
     #
     #             indexed = m.all_netcdfs()
     #
-    #             logger.debug('Found %d NetCDFs for this model.' % len(indexed))
-    #             # [logger.debug('>> ' + nf.split('/')[-1]) for nf in indexed]
+    #             print('Found %d NetCDFs for this model.' % len(indexed))
+    #             # [print('>> ' + nf.split('/')[-1]) for nf in indexed]
     #
     #             for i in indexed:
     #                 # Partial Weather files...
     #                 parts = i.split('/')
-    #                 logger.debug(parts[2])
+    #                 print(parts[2])
     #                 name_part = parts[-1].replace('.nc', '')
     #                 if parts[2] == 'Weather':
     #                     logger.warning(
@@ -137,7 +137,7 @@ class ModelRegister:
     #                 # IDN for NSW ??? might break later... potential bug
     #                 elif not name_part[:3] == 'IDV':
     #                     if name_part not in published_ncs:
-    #                         logger.debug(
+    #                         print(
     #                             'Not found in GeoServer Catalog: %s' % name_part)
     #                         try:
     #                             ModelRegister.geo_server.add_to_catalog(
@@ -145,7 +145,7 @@ class ModelRegister:
     #                         except:
     #                             unpublished.append(i)
     #
-    #             logger.debug('%d of %s were published.' %
+    #             print('%d of %s were published.' %
     #                          (len(lg.layers), len(indexed)))
     #
     #             if len(unpublished) > 0:
@@ -156,11 +156,11 @@ class ModelRegister:
     #                 for lgl in lg.layers:
     #                     this_layer = ModelRegister.geo_server.catalog.get_layer(
     #                         name=lgl)
-    #                     logger.debug(this_layer.name)
+    #                     print(this_layer.name)
     #
     #             validation.append(this_model)
     #
-    #     logger.debug('Done checking for layer groups in GeoServer.')
+    #     print('Done checking for layer groups in GeoServer.')
     #     return validation, errors
 
     # def register_new_model(self, new_model: Model):
@@ -176,7 +176,7 @@ class ModelRegister:
         return [m.code for m in self.models]
 
     def get(self, model_name):
-        logger.debug(model_name)
+        print(model_name)
         for m in self.models:
             if m.name == model_name:
                 return m
