@@ -27,7 +27,7 @@ import logging
 logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-print("logger set to DEBUG")
+logger.debug("logger set to DEBUG")
 
 plt.switch_backend('agg')
 
@@ -178,18 +178,18 @@ class DeadFuelModel(Model):
         else:
             collection = await asyncio.gather(*[self.collect_parameter_data(param, when)
                                                 for param in self.parameters])
-            print(collection)
+            logger.debug(collection)
             collection = [x for x in collection if x is not None]
             if len(collection) > 0:
                 return self.do_compilation(collection, when)
             else:
-                print("Collected an empty list of files!")
-                print(collection)
+                logger.debug("Collected an empty list of files!")
+                logger.debug(collection)
                 return None
 
     async def mpg(self, query: ShapeQuery):
         sr = await (self.get_shaped_resultcube(query))
-        print(sr)
+        logger.debug(sr)
         mp4 = await (MPEGFormatter.format(
             sr, self.outputs["readings"]["prefix"]))
         asyncio.sleep(1)
@@ -208,7 +208,7 @@ class DeadFuelModel(Model):
 
         asyncio.sleep(1)
         if len(fs) > 0:
-            print(fs)
+            logger.debug(fs)
 
             with xr.open_mfdataset(fs, concat_dim='time') as ds:
 
@@ -216,13 +216,13 @@ class DeadFuelModel(Model):
                     sr = ds.squeeze("observations")
                 else:
                     sr = ds
-                print(sr)
+                logger.debug(sr)
                 sr = sr.sel(time=slice(shape_query.temporal.start.strftime("%Y-%m-%d"),
                                        shape_query.temporal.finish.strftime("%Y-%m-%d")))
 
             return sr
         else:
-            print("No files available/gathered for that space/time.")
+            logger.debug("No files available/gathered for that space/time.")
             return xr.DataArray([])
 
     # async def get_resultcube(self, query: SpatioTemporalQuery) -> xr.DataArray:
@@ -265,7 +265,7 @@ class DeadFuelModel(Model):
     #     :param query:
     #     :return:
     #     """
-    #     print(
+    #     logger.debug(
     #         "--->>> SpatioTemporal Query Called on %s Model!! <<<---" % self.name)
     #     sr = await (self.get_resultcube(query))
     #     sr.load()
@@ -288,7 +288,7 @@ class DeadFuelModel(Model):
                 mask = AUmask.mask(dm['longitude'], dm['latitude'])
                 mask_ma = np.ma.masked_invalid(mask)
                 ds = ds.where(mask_ma == 0)
-                print("--- Saving %s" % (year))
+                logger.debug("--- Saving %s" % (year))
                 ds.attrs = dict()
                 ds.attrs['crs'] = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs "
                 ds.attrs['var_name'] = 'DFMC'
@@ -303,8 +303,8 @@ class DeadFuelModel(Model):
                 ds['DFMC'].attrs['name'] = self.outputs['readings']['prefix']
                 ds['DFMC'].attrs['standard_name'] = self.outputs['readings']['prefix']
 
-                # print(ds)
-                # print(ds[self.outputs['readings']['prefix']])
+                # logger.debug(ds)
+                # logger.debug(ds[self.outputs['readings']['prefix']])
                 # File is opened by itself, can't save because we're self locking
                 temp = ds
                 # close the handle first and then save
@@ -328,7 +328,7 @@ class DeadFuelModel(Model):
         y = when.strftime("%Y")
         m = when.strftime("%m")
         d = when.strftime("%d")
-        print(
+        logger.debug(
             "\n--> Processing data for: %s-%s-%s\n--> Converting: %s" % (d, m, y, file_name))
 
         nc_version = "%s.nc" % file_name
@@ -356,21 +356,21 @@ class DeadFuelModel(Model):
         if len(param_datasets) > 0:
 
             # if len(param_datasets) == 1:
-            #     print("Will open just: %s" % param_datasets)
+            #     logger.debug("Will open just: %s" % param_datasets)
             # elif len(param_datasets) > 1:
 
-            print("\n----> Will open: %s" % f for f in param_datasets)
+            logger.debug("\n----> Will open: %s" % f for f in param_datasets)
 
             with xr.open_mfdataset(param_datasets, concat_dim="observations") as ds:
                 vp = ds["VP3pm"].isel(time=0)
                 tmx = ds["Tmx"].isel(time=0)
                 dfmc = DeadFuelModel.calculate(vp, tmx)
                 dfmc = dfmc.expand_dims('time')
-                print("Processing data for: %s-%s-%s" % (d, m, y))
+                logger.debug("Processing data for: %s-%s-%s" % (d, m, y))
                 DFMC = dfmc.to_dataset('DFMC')
                 DFMC.to_netcdf(tempfile, format='NETCDF4')
-                print("\n------> Wrote: %s" % tempfile)
-                print(DFMC)
+                logger.debug("\n------> Wrote: %s" % tempfile)
+                logger.debug(DFMC)
 
             param_datasets.append(tempfile)
 
@@ -389,14 +389,14 @@ class DeadFuelModel(Model):
                 combined.attrs['comment'] = "#comments"
                 combined.attrs['var_name'] = self.outputs["readings"]["prefix"]
 
-                print(combined)
+                logger.debug(combined)
 
                 combined.to_netcdf(DFMC_file, mode='w', format='NETCDF4')
                 combined.close()
 
             os.remove(tempfile)
         else:
-            print("--> Can't open partial requirements!!! ")
+            logger.debug("--> Can't open partial requirements!!! ")
 
         # Send file to SWIFT Storage here?
         asyncio.sleep(1)
@@ -423,7 +423,7 @@ class DeadFuelModel(Model):
                                                + when.strftime("%Y%m%d")
                                                + param['suffix'])
 
-                print(data_file)
+                logger.debug(data_file)
 
                 archive_file = Path(
                     str(data_file) + param['compression_suffix'])
@@ -435,7 +435,7 @@ class DeadFuelModel(Model):
                             data_file, param, when)
 
                     elif not data_file.is_file() and archive_file.is_file():
-                        print(
+                        logger.debug(
                             'Found an unexpanded archive: %s' % archive_file)
                         await self.do_expansion(archive_file)
                         parameter_dataset_name = self.do_conversion(
@@ -453,16 +453,16 @@ class DeadFuelModel(Model):
                                     data_file, param, when)
 
                 except URLError as e:
-                    print(e)
+                    logger.debug(e)
                     return None
                 except FileNotFoundError as fnf:
-                    print(fnf)
+                    logger.debug(fnf)
                     return None
 
         if Path(parameter_dataset_name).is_file():
             return parameter_dataset_name
         else:
-            print("No parameters for that date.")
+            logger.debug("No parameters for that date.")
             return None
 
     @staticmethod
@@ -488,29 +488,29 @@ class DeadFuelModel(Model):
         return 6.79 + (27.43 * np.exp(1.05 * d))
 
     async def get_shaped_timeseries(self, query: ShapeQuery) -> ModelResult:
-        print(
+        logger.debug(
             "\n--->>> Shape Query Called successfully on %s Model!! <<<---" % self.name)
         sr = await (self.get_shaped_resultcube(query))
         sr.load()
         var = self.outputs['readings']['prefix']
         dps = []
         try:
-            print('Trying to find datapoints.')
+            logger.debug('Trying to find datapoints.')
 
             geoQ = GeoQuery(query)
             dps = geoQ.cast_fishnet({'init': 'EPSG:4326'}, sr[var])
-            print(dps)
+            logger.debug(dps)
 
         except FileNotFoundError:
-            print('Files not found for date range.')
+            logger.debug('Files not found for date range.')
         except ValueError as ve:
-            print(ve)
+            logger.debug(ve)
         except OSError as oe:
-            print(oe)
+            logger.debug(oe)
 
         if len(dps) == 0:
-            print('Found no datapoints.')
-            print(sr)
+            logger.debug('Found no datapoints.')
+            logger.debug(sr)
 
         asyncio.sleep(1)
 

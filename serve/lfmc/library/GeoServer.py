@@ -13,25 +13,25 @@ class GeoServer:
 
     def add_to_catalog(self, layer_group, layer_name, path_to_netcdf):
         if dev.DEBUG:
-            print('Got call to save to GeoServer Catalog.')
-            print("Layer group is: %s", layer_group)
-            print("NetCDF is here: %s", path_to_netcdf)
+            logger.debug('Got call to save to GeoServer Catalog.')
+            logger.debug("Layer group is: %s", layer_group)
+            logger.debug("NetCDF is here: %s", path_to_netcdf)
 
         # Add coverageStore if it doesn't already exist
         ft = self.catalog.create_coveragestore(
             layer_name, workspace=ws, data=path_to_netcdf)
 
-        print('Retrieving Default Style')
+        logger.debug('Retrieving Default Style')
         ft.default_style = self.geo_server.get_style(
             'lfmc:{}'.format(layer_group))
 
-        # print('Retrieving Layer')
+        # logger.debug('Retrieving Layer')
         # fts = self.geo_server.get_layer(layer_name)
 
         # Add layer for coverage store
         timeInfo = DimensionInfo("time", "true", "LIST", None, "ISO8601", None)
         ft.metadata = ({'time': timeInfo})
-        print('Attempting to save new coveragestore')
+        logger.debug('Attempting to save new coveragestore')
         self.catalog.save(ft)
 
         # Add layer to layer group

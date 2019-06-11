@@ -25,13 +25,13 @@ class SwiftStorage:
         success = False
         try:
             resp_headers = self.swift.head_object('MODIS', object_name)
-            print("%s exists." % object_name)
+            logger.debug("%s exists." % object_name)
             success = True
         except exceptions.ClientException as e:
             if e.http_status == '404':
-                print("The object: %s was not found." % object_name)
+                logger.debug("The object: %s was not found." % object_name)
             else:
-                print(
+                logger.debug(
                     "An error occurred checking the existence of object: %s" % object_name)
         return success
 
@@ -52,18 +52,18 @@ class SwiftStorage:
     def swift_check_lfmc(self, file_name):
         success = False
         try:
-            print('Checking SwiftStorage for: %s' % file_name)
+            logger.debug('Checking SwiftStorage for: %s' % file_name)
             resp_headers = self.swift.head_object('lfmc', str(file_name))
 
-            print("%s exists." % file_name)
+            logger.debug("%s exists." % file_name)
             success = True
         except TypeError as te:
-            print('Problem parsing file name?? ', file_name)
+            logger.debug('Problem parsing file name?? ', file_name)
         except exceptions.ClientException as e:
             if e.http_status == '404':
-                print("The object: %s was not found." % file_name)
+                logger.debug("The object: %s was not found." % file_name)
             else:
-                print(
+                logger.debug(
                     "An error occurred checking the existence of object: %s" % file_name)
         return success
 

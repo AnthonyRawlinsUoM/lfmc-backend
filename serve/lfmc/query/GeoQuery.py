@@ -21,7 +21,7 @@ import logging
 logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-print("logger set to DEBUG")
+logger.debug("logger set to DEBUG")
 
 
 class GeoQuery(ShapeQuery):
@@ -39,12 +39,12 @@ class GeoQuery(ShapeQuery):
 
     def build_index(self, grids):
         self.idx = index.Index()
-        print('Building Index()')
+        logger.debug('Building Index()')
         for pos, poly in enumerate(grids):
             self.idx.insert(pos, poly.bounds)
 
     def cast_fishnet(self, projection, df):
-        print('Called cast fishnet.')
+        logger.debug('Called cast fishnet.')
         cell_size = 1.0  # Default: 5 seconds
 
         # Get the largest nearest bounding box
@@ -52,7 +52,7 @@ class GeoQuery(ShapeQuery):
         bottom, left, top, right = self.query.spatio_temporal_query.spatial.expanded(
             cell_size)
 
-        print("\nB: %s\n L: %s\n T: %s\n R: %s\n" %
+        logger.debug("\nB: %s\n L: %s\n T: %s\n R: %s\n" %
                      (bottom, left, top, right))
 
         if 'latitude' in df.coords:
@@ -60,32 +60,32 @@ class GeoQuery(ShapeQuery):
                 df['latitude'] >= bottom, drop=True).values
             lons = df['longitude'].where(df['longitude'] <= right, drop=True).where(
                 df['longitude'] >= left, drop=True).values
-            # print(lons)
-            # print(lats)
+            # logger.debug(lons)
+            # logger.debug(lats)
         elif 'lat' in df.coords:
             lats = df['lat'].where(df['lat'] <= top, drop=True).where(
                 df['lat'] >= bottom, drop=True).values
             lons = df['lon'].where(df['lon'] <= right, drop=True).where(
                 df['lon'] >= left, drop=True).values
-            # print(lons)
-            # print(lats)
+            # logger.debug(lons)
+            # logger.debug(lats)
         else:
-            print("Can't determine coordinate naming conventions.")
+            logger.debug("Can't determine coordinate naming conventions.")
         # lons = np.arange(140.9500, 149.9800, 0.05)
         # lats = np.arange(-34.0000, -39.1500, -0.05)
 
-        # print(df)
+        # logger.debug(df)
 
         xl = len(lons) + 1
         yl = len(lats) + 1
         x = np.linspace(0, xl, xl)
         y = np.linspace(0, yl, yl)
 
-        # print('Selections X Length: %s' % len(x))
-        # print('DF lon range: %s to %s' %
+        # logger.debug('Selections X Length: %s' % len(x))
+        # logger.debug('DF lon range: %s to %s' %
         #              (df['lon'].min(), df['lon'].max()))
-        # print('Selections Y Length: %s' % len(y))
-        # print('DF lon range: %s to %s' %
+        # logger.debug('Selections Y Length: %s' % len(y))
+        # logger.debug('DF lon range: %s to %s' %
         #              (df['lat'].min(), df['lat'].max()))
 
         hlines = [((lon1, lai), (lon2, lai))
@@ -93,13 +93,13 @@ class GeoQuery(ShapeQuery):
         vlines = [((loi, lat1), (loi, lat2))
                   for lat1, lat2 in zip(lats[:-1], lats[1:]) for loi in lons]
 
-        # print(hlines)
-        # print(vlines)
-        # print(MultiLineString(hlines + vlines))
+        # logger.debug(hlines)
+        # logger.debug(vlines)
+        # logger.debug(MultiLineString(hlines + vlines))
 
         grids = list(polygonize(MultiLineString(hlines + vlines)))
 
-        # print(len(grids))
+        # logger.debug(len(grids))
 
         # Do only once
         if self.idx is None:
@@ -127,7 +127,7 @@ class GeoQuery(ShapeQuery):
 
         for t in sorted(df['time'].values):
 
-            print('Doing timeslice...')
+            logger.debug('Doing timeslice...')
 
             final_weights = dict()
             mcs = dict()
@@ -159,12 +159,12 @@ class GeoQuery(ShapeQuery):
                 non_nans = (indices).sum(1)
 
                 if len(non_nans) == 0:
-                    print(
+                    logger.debug(
                         'All moisture values are NaN. No datapoints to gather.')
-                    print(
+                    logger.debug(
                         tabulate(results[['moisture_content', 'weight']]))
                 else:
-                    print(
+                    logger.debug(
                         'Found {} cells with moisture.'.format(len(non_nans)))
 
                     if results[['weight']].values[indices].sum() == 0:
@@ -186,17 +186,17 @@ class GeoQuery(ShapeQuery):
                         shape_stats.append((t, area_weighted_average_mc,
                                             mean_mc, min_mc, max_mc, std_mc, median_mc, count_mc))
 
-        print('Done gathering stats over time.')
+        logger.debug('Done gathering stats over time.')
         final_stats = pd.DataFrame(shape_stats, columns=[
                                    'time', 'area_weighted_average_mc', 'mean_mc', 'min_mc', 'max_mc', 'std_mc', 'median_mc', 'count_mc'])
         final_stats.set_index('time', inplace=True)
 
-        print(tabulate(final_stats))
+        logger.debug(tabulate(final_stats))
         # This would be much better as a GeoDataFrame and export to JSON using __geo_interface__
 
         dps = []
         for row in final_stats.itertuples(index=True, name='Pandas'):
-            # print(row.Index.isoformat().replace('.000000000', '.000Z'))
+            # logger.debug(row.Index.isoformat().replace('.000000000', '.000Z'))
             dps.append(DataPoint(observation_time=row.Index.isoformat() + '.000Z',
                                  value=row.median_mc,
                                  mean=row.mean_mc,

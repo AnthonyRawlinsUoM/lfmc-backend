@@ -3,13 +3,13 @@ from rx import Observer
 
 class RegisterObserver(Observer):
     def on_next(self, value):
-        print(value)
+        logger.debug(value)
         pass
 
     def on_error(self, error):
-        print("Error: %s" % error)
+        logger.debug("Error: %s" % error)
         pass
 
     def on_completed(self):
-        print("Complete")
+        logger.debug("Complete")
         pass

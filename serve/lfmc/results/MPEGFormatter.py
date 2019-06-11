@@ -26,7 +26,7 @@ class MPEGFormatter:
         plt.ylabel('latitude')
         plt.xlabel('longitude')
         # plt.title(data.attrs["long_name"])  # TODO - not in all datasets!
-        print("\n--> Building MP4")
+        logger.debug("\n--> Building MP4")
 
         times = data[variable]['time'].sortby('time')
         ts = len(times)
@@ -42,10 +42,10 @@ class MPEGFormatter:
             frame = plt.imshow(im, cmap='viridis_r', animated=True)
             # Push onto array of frames
             frames.append([frame])
-            print("\n--> Generated frame %s of %s" % (t + 1, ts))
+            logger.debug("\n--> Generated frame %s of %s" % (t + 1, ts))
 
         vid = animation.ArtistAnimation(
             fig, frames, interval=50, blit=True, repeat_delay=1000)
         vid.save(video_filepath, writer='ffmpeg', codec='mpeg4')
-        print("\n--> Successfully wrote temp MP4 file.")
+        logger.debug("\n--> Successfully wrote temp MP4 file.")
         return video_name

@@ -21,7 +21,7 @@ import logging
 logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-print("logger set to DEBUG")
+logger.debug("logger set to DEBUG")
 
 
 class Model:
@@ -60,7 +60,7 @@ class Model:
             os.makedirs(file_path)
 
         ok = Path(self.netcdf_name_for_date(when)).is_file()
-        print("\n--> Checking for existence of NetCDF @ %s for %s: %s" %
+        logger.debug("\n--> Checking for existence of NetCDF @ %s for %s: %s" %
               (file_path, when.strftime("%d %m %Y"), ok))
 
         # TODO -if OK put the file into Swift Storage
@@ -70,7 +70,7 @@ class Model:
     @staticmethod
     async def do_download(url, resource, path):
         uri = url + resource
-        print("\n> Downloading...\n--> Retrieving: {} \n--> Saving to: {}\n".format(uri, str(path)))
+        logger.debug("\n> Downloading...\n--> Retrieving: {} \n--> Saving to: {}\n".format(uri, str(path)))
 
         try:
             p = subprocess.run(
@@ -86,7 +86,7 @@ class Model:
                 msg += 'Error code: %s\n' % e.code
             raise URLError(msg)
 
-        print('\n----> Download complete.\n')
+        logger.debug('\n----> Download complete.\n')
         return path
 
     @staticmethod
@@ -94,24 +94,24 @@ class Model:
 
         archive_file = str(archive_file)
 
-        print("\n--> Expanding: %s" % archive_file)
+        logger.debug("\n--> Expanding: %s" % archive_file)
         try:
             if archive_file.endswith('.Z'):
                 subprocess.run(['gunzip', '-k', archive_file],
                                shell=False, check=True)
                 # await asyncio.create_subprocess_shell('uncompress -k %s' % archive_file)
             else:
-                print('Not a .Z file!')
+                logger.debug('Not a .Z file!')
 
         except FileNotFoundError as e:
-            print("\n--> Expanding: %s, failed.\n%s" %
+            logger.debug("\n--> Expanding: %s, failed.\n%s" %
                   (archive_file, e))
             return False
         except OSError as e:
-            print("\n--> Removing: %s, was not necessary.\n %s" %
+            logger.debug("\n--> Removing: %s, was not necessary.\n %s" %
                   (archive_file, e))
         finally:
-            print('Expansion attempt complete.')
+            logger.debug('Expansion attempt complete.')
         return True
 
     @staticmethod
@@ -129,7 +129,7 @@ class Model:
         tvalue = str(b["time"].values).replace('.000000000', '.000Z')
         avalue = bin_[param].median()
 
-        print(
+        logger.debug(
             "\n>>>> Datapoint creation. (time={}, value={})".format(tvalue, avalue))
 
         asyncio.sleep(1)

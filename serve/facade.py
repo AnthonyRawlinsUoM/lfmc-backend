@@ -63,7 +63,7 @@ def consolidate(year):
 @app.task(trail=True)
 def log_error(e):
     logger.warning(e)
-    print(e)
+    logger.debug(e)
 
 
 @app.task(trail=True)
