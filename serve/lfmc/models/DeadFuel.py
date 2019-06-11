@@ -309,8 +309,9 @@ class DeadFuelModel(Model):
                 temp = ds
                 # close the handle first and then save
 
-            tfile = "%s%s_%s.nc" % (
-                self.path, self.outputs['readings']['prefix'], year)
+            tfile = "%s%s_%s.nc".format(self.path,
+                                        self.outputs['readings']['prefix'],
+                                        year)
 
             temp.to_netcdf(tfile + '.tmp')
             try:
