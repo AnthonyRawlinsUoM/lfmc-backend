@@ -44,6 +44,7 @@ def do_query(geo_json, start, finish, model):
             model.get_shaped_timeseries(sq))
     except ValueError as e:
         logger.error("ValueError")
+        result['error'] = json.dumps(e)
 
     mrs = ModelResultSchema()
     json_result, errors = mrs.dump(result)

@@ -350,8 +350,9 @@ def get_model(name):
 
 
 @hug.post('/convert.json', versions=range(1, 2))
-def convert_this_shapefile(shp: str):
-    final_result = do_conversion.s(shp)
+def convert_this_shapefile(shp):
+    logger.debug('Now Converting: %s' % str(shp))
+    final_result = do_conversion.s(str(shp))
     r = final_result.delay()
     return {'uuid': r.id}
 

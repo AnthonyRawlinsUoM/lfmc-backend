@@ -305,9 +305,20 @@ class DeadFuelModel(Model):
 
                 # logger.debug(ds)
                 # logger.debug(ds[self.outputs['readings']['prefix']])
+                # File is opened by itself, can't save because we're self locking
+                temp = ds
+                # close the handle first and then save
 
-                ds.to_netcdf("%s%s_%s.nc" %
-                             (self.path, self.outputs['readings']['prefix'], year))
+            tfile = "%s%s_%s.nc" %
+            (self.path, self.outputs['readings']['prefix'], year)
+
+            temp.to_netcdf(tfile + '.tmp')
+            try:
+                os.remove(tfile)
+            except e:
+                logger.error(e)
+            os.rename(tfile + '.tmp', tfile)
+
         return True
 
     @staticmethod
@@ -402,14 +413,14 @@ class DeadFuelModel(Model):
             if not file_path.is_dir():
                 os.makedirs(file_path)
 
-            parameter_dataset_name = file_path.joinpath(param['prefix'] + "_" +
-                                                        param['dataset'])
+            parameter_dataset_name = file_path.joinpath(param['prefix'] + "_"
+                                                        + param['dataset'])
             if parameter_dataset_name.is_file():
                 return parameter_dataset_name
             else:
-                data_file = file_path.joinpath(param['prefix'] + "_" +
-                                               when.strftime("%Y%m%d") +
-                                               param['suffix'])
+                data_file = file_path.joinpath(param['prefix'] + "_"
+                                               + when.strftime("%Y%m%d")
+                                               + param['suffix'])
 
                 logger.debug(data_file)
 

@@ -1,3 +1,4 @@
+from pathlib2 import Path
 import json
 import fiona
 import fiona.crs
@@ -11,8 +12,6 @@ import shapely.geometry
 import shapely.ops
 
 omit = ['SHAPE_AREA', 'SHAPE_LEN']
-
-from pathlib2 import Path
 
 
 class Conversion:
@@ -55,7 +54,7 @@ class Conversion:
 
         return json(geoj)
 
-    def convert_this(shp):
+    def convert_this(self, shp):
         shp = '/FuelModels/queries/' + shp
         geoj = shp.replace('.shp', '.json')
 
