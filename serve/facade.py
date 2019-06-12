@@ -44,7 +44,7 @@ def do_query(geo_json, start, finish, model):
             model.get_shaped_timeseries(sq))
     except ValueError as e:
         logger.error("ValueError")
-        result['error'] = json.dumps(e)
+        # result['error'] = json.dumps(e)
 
     mrs = ModelResultSchema()
     json_result, errors = mrs.dump(result)
@@ -63,7 +63,7 @@ def consolidate(year):
 @app.task(trail=True)
 def log_error(e):
     logger.warning(e)
-    print(e)
+    logger.debug(e)
 
 
 @app.task(trail=True)

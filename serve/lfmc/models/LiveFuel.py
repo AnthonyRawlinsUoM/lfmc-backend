@@ -105,13 +105,16 @@ class LiveFuelModel(Model):
                 "[Error] Can't continue. Didn't receive what we expected from USGS / NASA.")
         return queue
 
-    def is_acceptable_granule(self, granule):
-        return self.get_hv(granule) in LiveFuelModel.used_granules()
-
     def get_hv(self, url):
         """ Parses a HDF_EOS URI to extract HV coords """
         uri_parts = url.split('/')
         return self.hv_for_modis_granule(uri_parts[-1])
+
+    def is_acceptable_granule(self, granule):
+        """ Generates a list of tuples describing HV coords for granules that are used
+        to generate a MODIS composite covering Australia. Returns list of granules that match.
+        """
+        return self.get_hv(granule) in [(h, v) for h in range(27, 31) for v in range(9, 13)]
 
     @staticmethod
     def hv_for_modis_granule(granule):

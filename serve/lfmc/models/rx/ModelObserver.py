@@ -14,16 +14,16 @@ class ModelObserver(Observer):
 
     def on_next(self, mr):
         if isinstance(mr, ModelResult):
-            print("Yes, have ModelResult:")
-            print(self.schema.dumps(mr))
+            logger.debug("Yes, have ModelResult:")
+            logger.debug(self.schema.dumps(mr))
         else:
-            print(mr)
+            logger.debug(mr)
         pass
 
     def on_error(self, error):
-        print("Error: %s" % error)
+        logger.debug("Error: %s" % error)
         pass
 
     def on_completed(self):
-        print("Complete.")
+        logger.debug("Complete.")
         pass

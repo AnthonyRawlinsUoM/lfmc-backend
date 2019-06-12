@@ -309,9 +309,9 @@ class DeadFuelModel(Model):
                 temp = ds
                 # close the handle first and then save
 
-            tfile = "%s%s_%s.nc".format(self.path,
-                                        self.outputs['readings']['prefix'],
-                                        year)
+            tfile = "%s%s_%s.nc" % (self.path,
+                                    self.outputs['readings']['prefix'],
+                                    str(year))
 
             temp.to_netcdf(tfile + '.tmp')
             try:
@@ -414,14 +414,14 @@ class DeadFuelModel(Model):
             if not file_path.is_dir():
                 os.makedirs(file_path)
 
-            parameter_dataset_name = file_path.joinpath(param['prefix'] + "_" +
-                                                        param['dataset'])
+            parameter_dataset_name = file_path.joinpath(param['prefix'] + "_"
+                                                        + param['dataset'])
             if parameter_dataset_name.is_file():
                 return parameter_dataset_name
             else:
-                data_file = file_path.joinpath(param['prefix'] + "_" +
-                                               when.strftime("%Y%m%d") +
-                                               param['suffix'])
+                data_file = file_path.joinpath(param['prefix'] + "_"
+                                               + when.strftime("%Y%m%d")
+                                               + param['suffix'])
 
                 logger.debug(data_file)
 

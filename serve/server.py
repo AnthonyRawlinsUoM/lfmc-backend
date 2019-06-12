@@ -264,7 +264,8 @@ async def fuel_json(geo_json,
                            finish=finish,
                            geo_json=geo_json)
     except ValueError as ve:
-        return {'ValueError': json.dumps(ve)}
+
+        return {'ValueError': '500'}
 
     logger.debug(query.temporal.start.strftime("%Y%m%d"))
     logger.debug(query.temporal.finish.strftime("%Y%m%d"))

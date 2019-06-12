@@ -13,9 +13,9 @@ class GeoServer:
 
     def add_to_catalog(self, layer_group, layer_name, path_to_netcdf):
         if dev.DEBUG:
-            print('Got call to save to GeoServer Catalog.')
-            print("Layer group is: %s", layer_group)
-            print("NetCDF is here: %s", path_to_netcdf)
+            logger.debug('Got call to save to GeoServer Catalog.')
+            logger.debug("Layer group is: %s", layer_group)
+            logger.debug("NetCDF is here: %s", path_to_netcdf)
 
         # Add coverageStore if it doesn't already exist
         ft = self.catalog.create_coveragestore(

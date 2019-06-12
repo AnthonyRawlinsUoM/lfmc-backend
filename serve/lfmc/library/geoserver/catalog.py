@@ -196,7 +196,7 @@ class Catalog(object):
                 rest_url, response.status, content))
 
     def get_xml(self, rest_url):
-        print("GET %s", rest_url)
+        logger.debug("GET %s", rest_url)
 
         cached_response = self._cache.get(rest_url)
 
@@ -248,7 +248,7 @@ class Catalog(object):
             "Content-type": content_type,
             "Accept": content_type
         }
-        print("%s %s", obj.save_method, obj.href)
+        logger.debug("%s %s", obj.save_method, obj.href)
         response = self.http.request(rest_url, obj.save_method, message, headers)
         headers, body = response
         self._cache.clear()
@@ -429,10 +429,10 @@ class Catalog(object):
             "Accept": "application/xml"
         }
         if isinstance(data, dict):
-            print('Data is NOT a zipfile')
+            logger.debug('Data is NOT a zipfile')
             archive = prepare_upload_bundle(name, data)
         else:
-            print('Data is a zipfile')
+            logger.debug('Data is a zipfile')
             archive = data
         message = open(archive, 'rb')
         try:

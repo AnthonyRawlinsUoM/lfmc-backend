@@ -135,11 +135,11 @@ class Matthews(Model):
 
     def set_date(self, when):
         ds = when.strftime('%Y%m%d')
-        print("Setting date folder to: %s" % ds)
+        logger.debug("Setting date folder to: %s" % ds)
         self.model.set_netcdf_path(self.data_path + ds)
 
     async def run_main(self):
-        print("Running the Matthews Model NOW!")
+        logger.debug("Running the Matthews Model NOW!")
         try:
             self.model.set_mode("wet")
             self.model.run_model()
@@ -147,7 +147,7 @@ class Matthews(Model):
             self.model.run_model()
             PostProcessor.run_main()
         except OSError:
-            print("Model failed.")
+            logger.debug("Model failed.")
         finally:
             ncf = ""  # TODO
 
@@ -163,9 +163,9 @@ class Matthews(Model):
         fs = [pf for pf in fs if Path(pf).is_file()]
 
         if len(fs) > 0:
-            print(fs)
+            logger.debug(fs)
             with xr.open_mfdataset(fs) as ds:
-                print(ds)
+                logger.debug(ds)
                 if "observations" in ds.dims:
                     sr = ds.squeeze("observations")
 
@@ -175,7 +175,7 @@ class Matthews(Model):
 
     def netcdf_name_for_date(self, when):
 
-        print("Making NCDF name for date: %s" % when)
+        logger.debug("Making NCDF name for date: %s" % when)
 
         return "{}{}_{}{}".format(self.outputs["readings"]["path"],
                                   self.outputs["readings"]["prefix"],
@@ -193,7 +193,7 @@ class Matthews(Model):
         this_ncdf = self.netcdf_name_for_date(when)
 
         ok = Path(this_ncdf).is_file()
-        print("\n--> Checking for existence of NetCDF, %s for %s: %s" %
+        logger.debug("\n--> Checking for existence of NetCDF, %s for %s: %s" %
               (this_ncdf, when.strftime("%d %m %Y"), ok))
 
         # TODO -if OK put the file into Swift Storage
@@ -204,22 +204,22 @@ class Matthews(Model):
             return False
 
     async def get_shaped_timeseries(self, query: ShapeQuery) -> ModelResult:
-        print(
+        logger.debug(
             "\n--->>> Shape Query Called successfully on %s Model!! <<<---" % self.name)
-        print("Spatial Component is: \n%s" % str(query.spatial))
-        print("Temporal Component is: \n%s" % str(query.temporal))
+        logger.debug("Spatial Component is: \n%s" % str(query.spatial))
+        logger.debug("Temporal Component is: \n%s" % str(query.temporal))
 
-        print("\nDerived LAT1: %s\nDerived LON1: %s\nDerived LAT2: %s\nDerived LON2: %s" %
+        logger.debug("\nDerived LAT1: %s\nDerived LON1: %s\nDerived LAT2: %s\nDerived LON2: %s" %
               query.spatial.expanded(0.05))
 
         sr = await (self.get_shaped_resultcube(query))
 
-        print(sr)
-        print(sr.data)
+        logger.debug(sr)
+        logger.debug(sr.data)
         # Check our param exists in the shaped result set
         if len(sr.data) > 0:
 
-            print(">> Crack a beer we got there!! <<")
+            logger.debug(">> Crack a beer we got there!! <<")
 
             dps = [self.get_datapoint_for_param(b=sr.isel(time=t), param=self.outputs["readings"]["prefix"])
                    for t in range(0, len(sr["time"]))]
@@ -240,7 +240,7 @@ class Matthews(Model):
         return run
 
     async def get_shaped_timeseries(self, query: ShapeQuery) -> ModelResult:
-        print(
+        logger.debug(
             "\n--->>> Shape Query Called successfully on %s Model!! <<<---" % self.name)
 
         dps = []
