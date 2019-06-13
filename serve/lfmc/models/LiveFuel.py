@@ -156,10 +156,8 @@ class LiveFuelModel(Model):
         return list(set(queue))
 
     def which_archival_years_for_daterange(self, start, finish):
-        f = parse(finish)
-        s = parse(start)
-        years = int(f.year - s.year) + 1
-        return [int(s.year) + i for i in range(0, years)]
+        years = int(finish.year - start.year) + 1
+        return [int(start.year) + i for i in range(0, years)]
 
     def netcdf_name_for_date_and_granule(self, when, hv):
         return "{}{}__h{}v{}_{}{}".format(self.outputs["readings"]["path"],
