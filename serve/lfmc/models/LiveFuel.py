@@ -131,6 +131,17 @@ class LiveFuelModel(Model):
         v = int(hv_component[1])
         return h, v
 
+    @staticmethod
+    def hv_for_modis_granule(granule):
+        """ Extracts HV grid coords from naming conventions of HDF-EOS file.
+        Assumes input is a file name string conforming to EOS naming conventions."""
+
+        parts = granule.split('.')
+        hv_component = parts[2].split('v')
+        h = int(hv_component[0].replace('h', ''))
+        v = int(hv_component[1])
+        return h, v
+
     def date_for_modis_granule(self, granule):
         """ Extracts the observation date from the naming conventions of a HDF-EOS file"""
         # unravel naming conventions
