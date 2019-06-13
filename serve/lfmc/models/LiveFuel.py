@@ -120,18 +120,6 @@ class LiveFuelModel(Model):
         """
         return self.get_hv(granule) in [(h, v) for h in range(27, 31) for v in range(9, 13)]
 
-    @staticmethod
-    def hv_for_modis_granule(granule):
-        """ Extracts HV grid coords from naming conventions of HDF-EOS file.
-        Assumes input is a file name string conforming to EOS naming conventions."""
-
-        parts = granule.split('.')
-        hv_component = parts[2].split('v')
-        h = int(hv_component[0].replace('h', ''))
-        v = int(hv_component[1])
-        return h, v
-
-    @staticmethod
     def hv_for_modis_granule(granule):
         """ Extracts HV grid coords from naming conventions of HDF-EOS file.
         Assumes input is a file name string conforming to EOS naming conventions."""
@@ -159,7 +147,7 @@ class LiveFuelModel(Model):
             granules = r.text.split('\n')
             for line in granules:
                 if len(line) > 0:  # and self.is_acceptable_granule(line):
-                    h, v = hv_for_modis_granule(line.split('/')[-1])
+                    h, v = self.hv_for_modis_granule(line.split('/')[-1])
                     queue.append("h%sv%s" % (h, v))
         else:
             print('Failed')
