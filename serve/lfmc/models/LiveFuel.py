@@ -134,7 +134,7 @@ class LiveFuelModel(Model):
         # set the key for subgrouping to be the date of observation by parsing the Julian Date
         return dt.datetime.strptime((parts[1].replace('A', '')), '%Y%j')
 
-    def which_hvs_for_query(bbox):
+    def which_hvs_for_query(self, bbox):
         rurl = 'https://lpdaacsvc.cr.usgs.gov/services/inventory?product=MOD09A1&version=6&bbox=' + \
             bbox + '&date=2013-01-02,2013-04-05&output=text'
         queue = []
@@ -151,7 +151,7 @@ class LiveFuelModel(Model):
 
         return list(set(queue))
 
-    def which_archival_years_for_daterange(start, finish):
+    def which_archival_years_for_daterange(self, start, finish):
         f = parse(finish)
         s = parse(start)
         years = int(f.year - s.year) + 1
@@ -163,6 +163,12 @@ class LiveFuelModel(Model):
                                           hv,
                                           when.strftime("%Y"),
                                           self.outputs["readings"]["suffix"])
+
+    def fuel_name(self, granule):
+        h, v = self.hv_for_modis_granule(granule)
+        d = self.date_for_modis_granule(granule)
+        name = "LFMC_h{}v{}_{}.nc".format(h, v, d.strftime("%Y%m%d"))
+        return name
 
     async def dataset_files(self, start, finish, bbox):
         """
@@ -215,13 +221,8 @@ class LiveFuelModel(Model):
         else:
             return granules
 
-    def fuel_name(self, granule):
-        h, v = self.hv_for_modis_granule(granule)
-        d = self.date_for_modis_granule(granule)
-        name = "LFMC_h{}v{}_{}.nc".format(h, v, d.strftime("%Y%m%d"))
-        return name
-
     # ShapeQuery
+
     async def get_shaped_resultcube(self, shape_query: ShapeQuery) -> xr.DataArray:
         sr = None
         lat1, lon1, lat2, lon2 = shape_query.spatial.expanded(1.0)
