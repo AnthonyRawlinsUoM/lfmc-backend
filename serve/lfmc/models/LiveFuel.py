@@ -167,6 +167,12 @@ class LiveFuelModel(Model):
         logger.debug(dfiles)
         return [k for k, v in dfiles if Path(k).is_file()]
 
+    def fuel_name(self, granule):
+        h, v = self.hv_for_modis_granule(granule)
+        d = self.date_for_modis_granule(granule)
+        name = "LFMC_h{}v{}_{}.nc".format(h, v, d.strftime("%Y%m%d"))
+        return name
+
     # ShapeQuery
 
     async def get_shaped_resultcube(self, shape_query: ShapeQuery) -> xr.DataArray:
