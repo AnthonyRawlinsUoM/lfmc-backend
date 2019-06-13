@@ -95,7 +95,7 @@ class LiveFuelModel(Model):
         logger.debug('Getting %s' % url_string)
         r = requests.get(url_string)
         queue = []
-        if r.status_code == 200:
+        if r.status_code == requests.codes.ok:
             granules = r.text.split('\n')
             for line in granules:
                 if len(line) > 0 and self.is_acceptable_granule(line):
@@ -134,38 +134,86 @@ class LiveFuelModel(Model):
         # set the key for subgrouping to be the date of observation by parsing the Julian Date
         return dt.datetime.strptime((parts[1].replace('A', '')), '%Y%j')
 
+    def which_hvs_for_query(bbox):
+        rurl = 'https://lpdaacsvc.cr.usgs.gov/services/inventory?product=MOD09A1&version=6&bbox=' + \
+            bbox + '&date=2013-01-02,2013-04-05&output=text'
+        queue = []
+
+        r = requests.get(rurl)
+        if r.status_code == requests.codes.ok:
+            granules = r.text.split('\n')
+            for line in granules:
+                if len(line) > 0:  # and self.is_acceptable_granule(line):
+                    h, v = hv_for_modis_granule(line.split('/')[-1])
+                    queue.append("h%sv%s" % (h, v))
+        else:
+            print('Failed')
+
+        return list(set(queue))
+
+    def which_archival_years_for_daterange(start, finish):
+        f = parse(finish)
+        s = parse(start)
+        years = int(f.year - s.year) + 1
+        return [int(s.year) + i for i in range(0, years)]
+
+    def netcdf_name_for_date_and_granule(self, when, hv):
+        return "{}{}__h{}v{}_{}{}".format(self.outputs["readings"]["path"],
+                                          self.outputs["readings"]["prefix"],
+                                          hv,
+                                          when.strftime("%Y"),
+                                          self.outputs["readings"]["suffix"])
+
     async def dataset_files(self, start, finish, bbox):
         """
         Uses USGS service to match spatiotemporal query to granules required.
         converts each granule name to LFMC name
         """
-        product, version, obbox = self.modis_meta
-        dfiles = []
+        granules = []
 
-        rurl = "https://lpdaacsvc.cr.usgs.gov/services/inventory?product=" \
-            + product \
-            + "&version=" \
-            + version \
-            + "&bbox=" \
-            + bbox \
-            + "&date=" \
-            + start.strftime('%Y-%m-%d') \
-            + ',' \
-            + finish.strftime('%Y-%m-%d') \
-            + "&output=text"
+        # Generate names of hypothetical archives
+        for when in self.which_archival_years_for_daterange(start, finish):
+            for hv in self.which_hvs_for_query(bbox):
+                granules.append(
+                    self.netcdf_name_for_date_and_granule(when, hv))
 
-        inventory = await asyncio.gather(*[self.get_inventory_for_request(rurl)])
+        # Test for the existence of these archives
 
-        asyncio.sleep(1)
-        # Convert inventory to fuel_names
-        dfiles = [(self.fuel_name(g.split('/')[-1]), g)
-                  for sl in inventory for g in sl]
+        missing = [m for m in granules if not Path(m).is_file()]
 
-        # all_ok = await asyncio.gather(*[self.retrieve_earth_observation_data(
-        #     v) for k, v in dfiles if not Path(k).is_file()])
+        if len(missing) > 0:
+            logger.debug('Some granules are missing.')
+            logger.debug('Gathering missing granules.')
 
-        logger.debug(dfiles)
-        return [k for k, v in dfiles if Path(k).is_file()]
+            product, version, obbox = self.modis_meta
+            dfiles = []
+
+            rurl = "https://lpdaacsvc.cr.usgs.gov/services/inventory?product=" \
+                + product \
+                + "&version=" \
+                + version \
+                + "&bbox=" \
+                + bbox \
+                + "&date=" \
+                + start.strftime('%Y-%m-%d') \
+                + ',' \
+                + finish.strftime('%Y-%m-%d') \
+                + "&output=text"
+
+            inventory = await asyncio.gather(*[self.get_inventory_for_request(rurl)])
+
+            asyncio.sleep(1)
+            # Convert inventory to fuel_names
+            dfiles = [(self.fuel_name(g.split('/')[-1]), g)
+                      for sl in inventory for g in sl]
+
+            # all_ok = await asyncio.gather(*[self.retrieve_earth_observation_data(
+            #     v) for k, v in dfiles if not Path(k).is_file()])
+
+            logger.debug(dfiles)
+            return [k for k, v in dfiles if Path(k).is_file()]
+        else:
+            return granules
 
     def fuel_name(self, granule):
         h, v = self.hv_for_modis_granule(granule)
@@ -174,7 +222,6 @@ class LiveFuelModel(Model):
         return name
 
     # ShapeQuery
-
     async def get_shaped_resultcube(self, shape_query: ShapeQuery) -> xr.DataArray:
         sr = None
         lat1, lon1, lat2, lon2 = shape_query.spatial.expanded(1.0)
