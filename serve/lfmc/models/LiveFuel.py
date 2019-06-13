@@ -71,7 +71,7 @@ class LiveFuelModel(Model):
         self.outputs = {
             "type": "fuel moisture",
             "readings": {
-                "path": "LFMC",
+                "path": self.path,
                 "url": "LiveFM",
                 "prefix": "LFMC",
                 "suffix": ".nc",
@@ -90,7 +90,7 @@ class LiveFuelModel(Model):
         Warning: Files outside this directory aren't indexed and won't get ingested.
         :return:
         """
-        possibles = [p for p in glob.glob("{}{}_*{}".format(self.outputs["readings"]["path"],
+        possibles = [p for p in glob.glob("{}{}_*{}".format(self.path,
                                                             self.outputs["readings"]["prefix"],
                                                             self.outputs["readings"]["suffix"]))]
         return [f for f in possibles if Path(f).is_file()]
@@ -120,7 +120,7 @@ class LiveFuelModel(Model):
         """
         return self.get_hv(granule) in [(h, v) for h in range(27, 31) for v in range(9, 13)]
 
-    def hv_for_modis_granule(granule):
+    def hv_for_modis_granule(self, granule):
         """ Extracts HV grid coords from naming conventions of HDF-EOS file.
         Assumes input is a file name string conforming to EOS naming conventions."""
 
@@ -144,13 +144,14 @@ class LiveFuelModel(Model):
 
         r = requests.get(rurl)
         if r.status_code == requests.codes.ok:
+            logger.debug('200 OK')
             granules = r.text.split('\n')
             for line in granules:
                 if len(line) > 0:  # and self.is_acceptable_granule(line):
                     h, v = self.hv_for_modis_granule(line.split('/')[-1])
                     queue.append("h%sv%s" % (h, v))
         else:
-            print('Failed')
+            logger.debug('Failed')
 
         return list(set(queue))
 
@@ -159,11 +160,13 @@ class LiveFuelModel(Model):
         return [int(start.year) + i for i in range(0, years)]
 
     def netcdf_name_for_date_and_granule(self, when, hv):
-        return "{}{}__h{}v{}_{}{}".format(self.outputs["readings"]["path"],
-                                          self.outputs["readings"]["prefix"],
-                                          hv,
-                                          when.strftime("%Y"),
-                                          self.outputs["readings"]["suffix"])
+        name = "{}{}_{}_{}{}".format(self.outputs["readings"]["path"],
+                                     self.outputs["readings"]["prefix"],
+                                     when,
+                                     hv,
+                                     self.outputs["readings"]["suffix"])
+        logger.debug(name)
+        return name
 
     def fuel_name(self, granule):
         h, v = self.hv_for_modis_granule(granule)
@@ -185,12 +188,14 @@ class LiveFuelModel(Model):
                     self.netcdf_name_for_date_and_granule(when, hv))
 
         # Test for the existence of these archives
+        [logger.debug(g) for g in list(set(granules))]
 
-        missing = [m for m in granules if not Path(m).is_file()]
+        missing = [m for m in list(set(granules)) if not Path(m).is_file()]
 
         if len(missing) > 0:
-            logger.debug('Some granules are missing.')
-            logger.debug('Gathering missing granules.')
+            logger.debug('Some granules are missing:')
+            logger.debug(missing)
+            logger.debug('Gathering missing granules...')
 
             product, version, obbox = self.modis_meta
             dfiles = []
@@ -220,6 +225,7 @@ class LiveFuelModel(Model):
             logger.debug(dfiles)
             return [k for k, v in dfiles if Path(k).is_file()]
         else:
+            logger.debug('Granules are OK.')
             return granules
 
     # ShapeQuery
