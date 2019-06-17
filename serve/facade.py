@@ -6,7 +6,7 @@ from celery import Celery
 
 from serve.lfmc.query.ShapeQuery import ShapeQuery
 from serve.lfmc.models.ModelRegister import ModelRegister
-from serve.lfmc.results import ModelResult
+from serve.lfmc.results import ModelResult, MPEGFormatter
 from serve.lfmc.results.ModelResult import ModelResultSchema
 from serve.lfmc.process.Conversion import Conversion
 
@@ -27,6 +27,64 @@ app = Celery('facade',
              broker='redis://caching:6379/0')
 
 app.Task.resultrepr_maxsize = 2000
+
+##################
+# NetCDF Results #
+##################
+
+
+@app.task(trail=True)
+def do_netcdf(geo_json, start, finish, model):
+    result = {}
+    try:
+        sq = ShapeQuery(geo_json=geo_json,
+                        start=start,
+                        finish=finish)
+        mr = ModelRegister()
+        model = mr.get(model)
+
+        looped = asyncio.new_event_loop()
+        result = looped.run_until_complete(
+            model.get_shaped_timeseries(sq))
+    except ValueError as e:
+        logger.error("ValueError")
+        # result['error'] = json.dumps(e)
+
+    # Return result as filename string
+    # HUG will stream the binary data
+    return result
+
+
+###############
+# MP4 Results #
+###############
+
+@app.task(trail=True)
+def do_mp4(geo_json, start, finish, model):
+    result = {}
+    try:
+        sq = ShapeQuery(geo_json=geo_json,
+                        start=start,
+                        finish=finish)
+        mr = ModelRegister()
+        model = mr.get(model)
+
+        looped = asyncio.new_event_loop()
+        result = looped.run_until_complete(
+            model.get_shaped_timeseries(sq))
+    except ValueError as e:
+        logger.error("ValueError")
+        # result['error'] = json.dumps(e)
+
+    # Return result as filename string
+    # HUG will stream the binary data
+
+    # TODO - Double Check model.code is always var_name of DataSet!
+    return MPEGFormatter.format(result, model.code)
+
+################
+# JSON Results #
+################
 
 
 @app.task(trail=True)
@@ -69,7 +127,8 @@ def log_error(e):
 @app.task(trail=True)
 def do_conversion(shp):
     logger.debug('Got conversion request: ' + shp)
-    return Conversion.convert_this(shp)
+    c = Conversion()
+    return c.convert_this(shp)
 
 # if __name__ == '__main__':
 #     ModelFacade.create_models()

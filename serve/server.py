@@ -15,6 +15,8 @@ from serve.lfmc.results.ModelResult import ModelResultSchema
 from serve.lfmc.models.ModelRegister import ModelRegister, ModelsRegisterSchema
 
 from serve.facade import do_query
+from serve.facade import do_netcdf
+from serve.facade import do_mp4
 from serve.facade import log_error
 from serve.facade import consolidate
 from serve.facade import do_conversion
@@ -100,95 +102,70 @@ def model_codes():
     return mr.get_model_codes()
 
 
-# @hug.cli()
-# @hug.get('/fuel.mp4', versions=1, output=suffix_output)
-# async def fuel_mp4(geo_json,
-#                    start: fields.String(),
-#                    finish: fields.String(),
-#                    models: hug.types.delimited_list(','),
-#                    response_as: hug.types.number = None):
-#     logger.debug("Responding to NETCDF query...")
-#     query = ShapeQuery(start=start, finish=finish,
-#                        geo_json=geojson.loads(geo_json), weighted=True)
-#
-#     logger.debug(query.temporal.start.strftime("%Y%m%d"))
-#     logger.debug(query.temporal.finish.strftime("%Y%m%d"))
-#
-#     # Which models are we working with?
-#     model_subset = ['DFMC']
-#     if models is not None:
-#         model_subset = models
-#
-#     mr = ModelRegister()
-#
-#     logger.debug("Responding to MP4 query...")
-#     # TODO - only returns first model at the moment
-#     mpg = (await asyncio.gather(*[mr.get("dead_fuel").mpg(query)]))[0]
-
-    # response = ['http://cdn.landscapefuelmoisture.bushfirebehaviour.net.au/movies/{}'.format(m) for m in mpg]
-    # response = "http://cdn.landscapefuelmoisture.bushfirebehaviour.net.au/movies/{0}".format(
-    #     mpg)
-    # errors = []
-    #
-    # asyncio.sleep(0.1)
-    #
-    # if dev.DEBUG:
-    #     logger.debug(response)
-    #
-    # if len(errors) > 0:
-    #     logger.debug(errors)
-    #     return errors
-    # else:
-    #     # Default Response
-    #     query.logResponse()
-    #     return response
+@hug.cli()
+@hug.get('/result.mp4', versions=1, output=suffix_output)
+@hug.post('/result.mp4', versions=1, output=suffix_output)
+def result_mpg(uuid):
+    res = AsyncResult(uuid, app=app)
+    if res.state == 'SUCCESS':
+        return res.get()
 
 
-# @hug.cli()
-# @hug.get('/fuel.nc', versions=1, output=suffix_output)
-# async def fuel_nc(geo_json,
-#                   start: fields.String(),
-#                   finish: fields.String(),
-#                   models: hug.types.delimited_list(',')):
-#     logger.debug("Responding to NETCDF query...")
-#     logger.debug(geojson.dumps(geo_json))
-#
-#     query = ShapeQuery(start=start, finish=finish,
-#                        geo_json=geo_json)
-#
-#     logger.debug(query.temporal.start.strftime("%Y%m%d"))
-#     logger.debug(query.temporal.finish.strftime("%Y%m%d"))
-#
-#     # Which models are we working with?
-#     model_subset = ['DFMC']
-#     if models is not None:
-#         model_subset = models
-#
-#     mr = ModelRegister()
-#
-#     # TODO - only returns first model at the moment
-#     response = await asyncio.gather(*[mr.get(model).get_netcdf(query) for model in model_subset])
-#     logger.debug(response[0])
-#
-#     tuuid = uuid.uuid4()
-#     tfile = '/tmp/{}.nc'.format(tuuid)
-#     response[0].to_netcdf(tfile, format='NETCDF4')
-#
-#     errors = []
-#
-#     asyncio.sleep(0.1)
-#
-#     if dev.DEBUG:
-#         logger.debug(response)
-#
-#     if len(errors) > 0:
-#         logger.debug(errors)
-#         return errors
-#     else:
-#         # Default Response
-#         query.logResponse()
-#         return tfile
+@hug.get('/submit_query.mp4', versions=1, output=suffix_output)
+@hug.post('/submit_query.mp4', versions=1, output=suffix_output)
+def submit_mp4_query(geo_json,
+                     start: fields.String(),
+                     finish: fields.String(),
+                     models: hug.types.delimited_list(',')):
+    """
+    Takes query parameters and returns endpoint where progress/status can be monitored.
+    Utilises Partial Chain to use result of ShapeQuery in call signature of 'do_query'.
+    HUG then handles formatting the result as a json object.
+    """
+    final_result = group(
+        [do_mp4.s(geo_json, start, finish, model) for model in models])
 
+    res = final_result.delay()  # Removed 1 minute from now
+    return [{'uuid': r.id} for r in res.children]
+
+###############
+# NetCDF Code #
+###############
+
+
+@hug.cli()
+@hug.get('/result.nc', versions=1, output=suffix_output)
+@hug.post('/result.nc', versions=1, output=suffix_output)
+def result_netcdf(uuid):
+    res = AsyncResult(uuid, app=app)
+    if res.state == 'SUCCESS':
+        return res.get()
+
+
+@hug.get('/submit_query.nc', versions=1, output=suffix_output)
+@hug.post('/submit_query.nc', versions=1, output=suffix_output)
+def submit_nc_query(geo_json,
+                    start: fields.String(),
+                    finish: fields.String(),
+                    models: hug.types.delimited_list(',')):
+    """
+    Takes query parameters and returns endpoint where progress/status can be monitored.
+    Utilises Partial Chain to use result of ShapeQuery in call signature of 'do_query'.
+    HUG then handles formatting the result as a json object.
+    """
+    final_result = group(
+        [do_netcdf.s(geo_json, start, finish, model) for model in models])
+
+    res = final_result.delay()  # Removed 1 minute from now
+    return [{'uuid': r.id} for r in res.children]
+
+
+#############
+# JSON Code #
+#############
+
+@hug.cli()
+@hug.get('/result.json', versions=1, output=suffix_output)
 @hug.post('/result.json', versions=1, output=suffix_output)
 def result(uuid):
     res = AsyncResult(uuid, app=app)
@@ -204,16 +181,13 @@ def submit_query(geo_json,
                  models: hug.types.delimited_list(',')):
     """
     Takes query parameters and returns endpoint where progress/status can be monitored.
-
     Utilises Partial Chain to use result of ShapeQuery in call signature of 'do_query'.
-
     HUG then handles formatting the result as a json object.
     """
     final_result = group(
         [do_query.s(geo_json, start, finish, model) for model in models])
 
     res = final_result.delay()  # Removed 1 minute from now
-
     return [{'uuid': r.id} for r in res.children]
 
 
@@ -351,9 +325,9 @@ def get_model(name):
 
 
 @hug.post('/convert.json', versions=range(1, 2))
-def convert_this_shapefile(shp):
-    logger.debug('Now Converting: %s' % str(shp))
-    final_result = do_conversion.s(str(shp))
+def convert_this_shapefile(shp: str):
+    logger.debug('Now Converting: %s' % shp)
+    final_result = do_conversion.s(shp)
     r = final_result.delay()
     return {'uuid': r.id}
 

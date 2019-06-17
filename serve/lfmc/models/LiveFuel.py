@@ -239,14 +239,18 @@ class LiveFuelModel(Model):
         bbox = "%3.3f,%3.3f,%3.3f,%3.3f" % (lon1, lat1, lon2, lat2)
         # logger.debug("%s" % bbox)
 
-        collection = await self.dataset_files(shape_query.temporal.start, shape_query.temporal.finish, bbox)
+        # collection = await self.dataset_files(shape_query.temporal.start, shape_query.temporal.finish, bbox)
+
+        collection = [
+            '/FuelModels/Live_FM/LFMC_2018_h28v12.nc',
+            '/FuelModels/Live_FM/LFMC_2018_h29v12.nc',
+            '/FuelModels/Live_FM/LFMC_2019_h28v12.nc',
+            '/FuelModels/Live_FM/LFMC_2019_h29v12.nc']
 
         logger.debug('Files to open are...')
-        flat_list = list(
-            set([item for sublist in collection for item in sublist]))
-        fs = [self.outputs['readings']['path'] + "/" + f for f in flat_list if Path(
-            self.outputs['readings']['path'] + "/" + f).is_file()]
-        logger.debug(fs)
+        logger.debug(collection)
+
+        fs = collection
 
         asyncio.sleep(1)
         if len(fs) > 0:

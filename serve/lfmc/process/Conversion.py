@@ -52,39 +52,47 @@ class Conversion:
                         sink.write(feat)
         # Remove the default WGS84 crs to avoid GeoJSON import error on UI
 
-        return json(geoj)
+        return geoj
 
-    def convert_this(self, shp):
+    @staticmethod
+    def convert_this(shp):
         shp = '/FuelModels/queries/' + shp
         geoj = shp.replace('.shp', '.json')
 
-        with fiona.open(shp) as source:
-            # Use the recipe from the Shapely documentation:
-            # http://toblerity.org/shapely/manual.html
-            project = functools.partial(pyproj.transform,
-                                        pyproj.Proj(**source.crs),
-                                        pyproj.Proj(init='epsg:4326'))
+        if Path(geoj).is_file():
+            contents = open(geoj, 'r')
+            return json.loads(contents.read())
 
-            features = []
-            for f in source:
-                shape = shapely.geometry.shape(f['geometry'])
-                projected_shape = shapely.ops.transform(project, shape)
+        if not Path(shp).is_file():
+            raise FileNotFoundError("File not found.")
+        else:
+            with fiona.open(shp) as source:
+                # Use the recipe from the Shapely documentation:
+                # http://toblerity.org/shapely/manual.html
+                project = functools.partial(pyproj.transform,
+                                            pyproj.Proj(**source.crs),
+                                            pyproj.Proj(init='epsg:4326'))
 
-                # Remove the properties we don't want
-                props = f['properties']  # props is a reference
-                for k in omit:
-                    if k in props:
-                        del props[k]
+                features = []
+                for f in source:
+                    shape = shapely.geometry.shape(f['geometry'])
+                    projected_shape = shapely.ops.transform(project, shape)
 
-                feature = geojson.Feature(id=f['id'],
-                                          geometry=projected_shape,
-                                          properties=props)
-                features.append(feature)
+                    # Remove the properties we don't want
+                    props = f['properties']  # props is a reference
+                    for k in omit:
+                        if k in props:
+                            del props[k]
 
-        fc = geojson.FeatureCollection(features)
+                    feature = geojson.Feature(id=f['id'],
+                                              geometry=projected_shape,
+                                              properties=props)
+                    features.append(feature)
 
-        with open(geoj, 'w') as f:
-            f.write(geojson.dumps(fc))
+            fc = geojson.FeatureCollection(features)
+
+            with open(geoj, 'w') as f:
+                f.write(geojson.dumps(fc))
 
         return geojson.dumps(fc)
 
