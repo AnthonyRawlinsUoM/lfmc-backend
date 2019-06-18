@@ -215,7 +215,7 @@ class GeoQuery(ShapeQuery):
                     final_weights[pos] = weight
                     mcs[pos] = cells[0]
 
-            data = [t, [mcs[pos], final_weights[pos], agg_geom[pos].wkt]
+            data = [[t, mcs[pos], final_weights[pos], agg_geom[pos].wkt]
                     for pos in final_weights]
 
             if len(data) > 0:

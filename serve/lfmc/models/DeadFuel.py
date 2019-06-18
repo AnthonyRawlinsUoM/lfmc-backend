@@ -21,7 +21,7 @@ from serve.lfmc.query.GeoQuery import GeoQuery
 from serve.lfmc.query.SpatioTemporalQuery import SpatioTemporalQuery
 import pickle
 import regionmask
-
+import geopandas as gp
 import matplotlib.pyplot as plt
 import logging
 logging.basicConfig()
@@ -487,20 +487,19 @@ class DeadFuelModel(Model):
         d = np.clip(ea - es, None, 0)
         return 6.79 + (27.43 * np.exp(1.05 * d))
 
-    async def get_shaped_timeseries(self, query: ShapeQuery):
-        logger.debug(
-            "\n--->>> Shape Query Called successfully on %s Model!! <<<---" % self.name)
-        sr = await (self.get_shaped_resultcube(query))
-        sr.load()
-        var = self.outputs['readings']['prefix']
-        dps = []
+    async def get_shaped_timeseries(self, query: ShapeQuery): -> gp.GeoDataFrame
+    logger.debug(
+        "\n--->>> Shape Query Called successfully on %s Model!! <<<---" % self.name)
+    sr = await(self.get_shaped_resultcube(query))
+    sr.load()
+     var = self.outputs['readings']['prefix']
+      dps = []
 
-        try:
+       try:
             logger.debug('Trying to find datapoints.')
 
             geoQ = GeoQuery(query)
             df = geoQ.cast_fishnet({'init': 'EPSG:4326'}, sr[var])
-
         except FileNotFoundError:
             logger.debug('Files not found for date range.')
         except ValueError as ve:
