@@ -19,6 +19,7 @@ from serve.lfmc.results.ModelResult import ModelResult
 from serve.lfmc.query.ShapeQuery import ShapeQuery
 from serve.lfmc.query.GeoQuery import GeoQuery
 from serve.lfmc.query.SpatioTemporalQuery import SpatioTemporalQuery
+
 import pickle
 import regionmask
 import geopandas as gp
@@ -487,13 +488,12 @@ class DeadFuelModel(Model):
         d = np.clip(ea - es, None, 0)
         return 6.79 + (27.43 * np.exp(1.05 * d))
 
-    async def get_shaped_timeseries(self, query: ShapeQuery) -> gp.GeoDataFrame:
+    async def get_shaped_timeseries(self, query: ShapeQuery):
         logger.debug(
             "\n--->>> Shape Query Called successfully on %s Model!! <<<---" % self.name)
-        sr = await(self.get_shaped_resultcube(query))
+        sr = await (self.get_shaped_resultcube(query))
         sr.load()
         var = self.outputs['readings']['prefix']
-        dps = []
 
         try:
             logger.debug('Trying to find datapoints.')
