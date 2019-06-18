@@ -487,7 +487,7 @@ class DeadFuelModel(Model):
         d = np.clip(ea - es, None, 0)
         return 6.79 + (27.43 * np.exp(1.05 * d))
 
-    async def get_shaped_timeseries(self, query: ShapeQuery): -> gp.GeoDataFrame
+    async def get_shaped_timeseries(self, query: ShapeQuery) -> gp.GeoDataFrame:
     logger.debug(
         "\n--->>> Shape Query Called successfully on %s Model!! <<<---" % self.name)
     sr = await(self.get_shaped_resultcube(query))
