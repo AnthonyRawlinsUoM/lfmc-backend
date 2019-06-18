@@ -45,6 +45,8 @@ class GeoQuery(ShapeQuery):
 
     def pull_fishnet(self, results: gp.GeoDataFrame):
 
+        logger.debug(results)
+
         moisture = results[['moisture_content']].values
 
         indices = ~pd.isnull(moisture)
@@ -226,5 +228,5 @@ class GeoQuery(ShapeQuery):
 
         rdf = gpd.GeoDataFrame(
             pd.concat(dataframesList, ignore_index=True), crs=dataframesList[0].crs)
-
+        logger.debug(rdf)
         return rdf

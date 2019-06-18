@@ -488,14 +488,14 @@ class DeadFuelModel(Model):
         return 6.79 + (27.43 * np.exp(1.05 * d))
 
     async def get_shaped_timeseries(self, query: ShapeQuery) -> gp.GeoDataFrame:
-    logger.debug(
-        "\n--->>> Shape Query Called successfully on %s Model!! <<<---" % self.name)
-    sr = await(self.get_shaped_resultcube(query))
-    sr.load()
-     var = self.outputs['readings']['prefix']
-      dps = []
+        logger.debug(
+            "\n--->>> Shape Query Called successfully on %s Model!! <<<---" % self.name)
+        sr = await(self.get_shaped_resultcube(query))
+        sr.load()
+        var = self.outputs['readings']['prefix']
+        dps = []
 
-       try:
+        try:
             logger.debug('Trying to find datapoints.')
 
             geoQ = GeoQuery(query)
