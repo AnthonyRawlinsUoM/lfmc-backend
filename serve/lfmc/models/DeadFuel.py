@@ -488,7 +488,7 @@ class DeadFuelModel(Model):
         d = np.clip(ea - es, None, 0)
         return 6.79 + (27.43 * np.exp(1.05 * d))
 
-    async def get_shaped_timeseries(self, query: ShapeQuery):
+    async def get_shaped_timeseries(self, query: GeoQuery):
         logger.debug(
             "\n--->>> Shape Query Called successfully on %s Model!! <<<---" % self.name)
         sr = await (self.get_shaped_resultcube(query))
@@ -515,7 +515,7 @@ class DeadFuelModel(Model):
         asyncio.sleep(1)
         return df
 
-    async def get_timeseries_results(self, query: ShapeQuery) -> ModelResult:
+    async def get_timeseries_results(self, query: GeoQuery) -> ModelResult:
         df = await (self.get_shaped_resultcube(query))
         geoQ = GeoQuery(query)
         dps = geoQ.pull_fishnet(df)
