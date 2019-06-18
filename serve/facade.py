@@ -46,7 +46,7 @@ def do_netcdf(geo_json, start, finish, model):
 
         looped = asyncio.new_event_loop()
         result = looped.run_until_complete(
-            model.get_shaped_timeseries(sq))
+            model.get_netcdf_results(sq))
     except ValueError as e:
         logger.error("ValueError")
         # result['error'] = json.dumps(e)
@@ -72,7 +72,7 @@ def do_mp4(geo_json, start, finish, model):
 
         looped = asyncio.new_event_loop()
         result = looped.run_until_complete(
-            model.get_shaped_timeseries(sq))
+            model.get_mp4_results(sq))
     except ValueError as e:
         logger.error("ValueError")
         # result['error'] = json.dumps(e)
@@ -80,11 +80,8 @@ def do_mp4(geo_json, start, finish, model):
     # Return result as filename string
     # HUG will stream the binary data
     logger.debug(result)
-
     # TODO - Double Check model.code is always var_name of DataSet!
-    mf = MPEGFormatter()
-
-    return mf.as_format(result, model.code)
+    return result
 
 ################
 # JSON Results #

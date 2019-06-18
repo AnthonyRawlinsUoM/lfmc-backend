@@ -4,6 +4,7 @@ import os.path
 from urllib.error import URLError
 import asyncio
 import numpy as np
+import pandas as pd
 
 import datetime as dt
 import xarray as xr
@@ -22,7 +23,8 @@ from serve.lfmc.query.SpatioTemporalQuery import SpatioTemporalQuery
 import pickle
 import regionmask
 
-import matplotlib.pyplot as plt
+from uuid import uuid4
+
 import logging
 logging.basicConfig()
 logger = logging.getLogger(__name__)
@@ -187,19 +189,8 @@ class DeadFuelModel(Model):
                 logger.debug(collection)
                 return None
 
-    async def mpg(self, query: ShapeQuery):
-        sr = await (self.get_shaped_resultcube(query))
-        logger.debug(sr)
-        mp4 = await (MPEGFormatter.format(
-            sr, self.outputs["readings"]["prefix"]))
-        asyncio.sleep(1)
-        return mp4
-
-    async def get_netcdf(self, query: ShapeQuery):
-        sr = await (self.get_shaped_resultcube(query))
-        return sr
-
     # ShapeQuery
+
     async def get_shaped_resultcube(self, shape_query: ShapeQuery) -> xr.DataArray:
         sr = None
         fs = await asyncio.gather(*[self.dataset_files(when) for when in shape_query.temporal.dates()])
@@ -218,7 +209,9 @@ class DeadFuelModel(Model):
                     sr = ds
                 logger.debug(sr)
                 sr = sr.sel(time=slice(shape_query.temporal.start.strftime("%Y-%m-%d"),
-                                       shape_query.temporal.finish.strftime("%Y-%m-%d")))
+                                       shape_query.temporal.finish.strftime("%Y-%m-%d")), drop=True).sel(latitude=slice(lat1, lat2), longitude=slice(lon1, lon2), drop=True))
+
+
 
             return sr
         else:
@@ -276,40 +269,40 @@ class DeadFuelModel(Model):
 
     async def consolidate_year(self, y):
         with open(Model.path() + 'australia.pickle', 'rb') as pickled_australia:
-            australia = pickle.load(pickled_australia)
+            australia=pickle.load(pickled_australia)
 
-        AUmask = regionmask.Regions_cls(
+        AUmask=regionmask.Regions_cls(
             'AUmask', [0], ['Australia'], ['AU'], [australia.polygon])
 
         for year in range(y, y + 1):
-            with xr.open_mfdataset("%s%s_%s*" % (self.outputs['readings']['path'], self.outputs['readings']['prefix'], year), chunks={'time': 1}) as ds:
-                ds['DFMC'] = ds['DFMC'].isel(observations=0, drop=True)
-                dm = ds['DFMC'].isel(time=0)
-                mask = AUmask.mask(dm['longitude'], dm['latitude'])
-                mask_ma = np.ma.masked_invalid(mask)
-                ds = ds.where(mask_ma == 0)
+            with xr.open_mfdataset("%s%s_%s*" % (self.outputs['readings']['path'], self.outputs['readings']['prefix'], year), chunks = {'time': 1}) as ds:
+                ds['DFMC']=ds['DFMC'].isel(observations = 0, drop = True)
+                dm=ds['DFMC'].isel(time = 0)
+                mask=AUmask.mask(dm['longitude'], dm['latitude'])
+                mask_ma=np.ma.masked_invalid(mask)
+                ds=ds.where(mask_ma == 0)
                 logger.debug("--- Saving %s" % (year))
-                ds.attrs = dict()
-                ds.attrs['crs'] = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs "
-                ds.attrs['var_name'] = 'DFMC'
+                ds.attrs=dict()
+                ds.attrs['crs']="+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs "
+                ds.attrs['var_name']='DFMC'
 
-                ds['time'].attrs['long_name'] = 'time'
-                ds['time'].attrs['name'] = 'time'
-                ds['time'].attrs['standard_name'] = 'time'
+                ds['time'].attrs['long_name']='time'
+                ds['time'].attrs['name']='time'
+                ds['time'].attrs['standard_name']='time'
 
-                ds['DFMC'].attrs['units'] = 'fullness'
+                ds['DFMC'].attrs['units']='fullness'
                 ds['DFMC'].attrs[
-                    'long_name'] = 'Dead Fine Fuels Moisture Content - (Percentage wet over dry by weight)'
-                ds['DFMC'].attrs['name'] = self.outputs['readings']['prefix']
-                ds['DFMC'].attrs['standard_name'] = self.outputs['readings']['prefix']
+                    'long_name']= 'Dead Fine Fuels Moisture Content - (Percentage wet over dry by weight)'
+                ds['DFMC'].attrs['name']= self.outputs['readings']['prefix']
+                ds['DFMC'].attrs['standard_name']= self.outputs['readings']['prefix']
 
                 # logger.debug(ds)
                 # logger.debug(ds[self.outputs['readings']['prefix']])
                 # File is opened by itself, can't save because we're self locking
-                temp = ds
+                temp= ds
                 # close the handle first and then save
 
-            tfile = "%s%s_%s.nc" % (self.path,
+            tfile= "%s%s_%s.nc" % (self.path,
                                     self.outputs['readings']['prefix'],
                                     str(year))
 
@@ -325,33 +318,33 @@ class DeadFuelModel(Model):
     @staticmethod
     def do_conversion(file_name, param, when):
         """ Converts Arc Grid input files to NetCDF4 """
-        y = when.strftime("%Y")
-        m = when.strftime("%m")
-        d = when.strftime("%d")
+        y=when.strftime("%Y")
+        m=when.strftime("%m")
+        d=when.strftime("%d")
         logger.debug(
             "\n--> Processing data for: %s-%s-%s\n--> Converting: %s" % (d, m, y, file_name))
 
-        nc_version = "%s.nc" % file_name
-        arr = xr.open_rasterio("%s" % file_name)
-        arr = arr.to_dataset(name="observations", dim=param["prefix"])
-        arr = arr.rename({'y': 'latitude', 'x': 'longitude', 'band': 'time'})
-        arr.coords['time'] = [dt.datetime(int(y), int(m), int(d))]
-        arr.attrs['time:units'] = "Days since %s-%s-%s 00:00:00" % (y, m, d)
-        arr.attrs['crs'] = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs "
-        arr.attrs['created'] = "%s" % (dt.datetime.now().strftime("%d-%m-%Y"))
-        arr.to_netcdf(nc_version, mode='w', format='NETCDF4')
+        nc_version="%s.nc" % file_name
+        arr=xr.open_rasterio("%s" % file_name)
+        arr=arr.to_dataset(name = "observations", dim = param["prefix"])
+        arr=arr.rename({'y': 'latitude', 'x': 'longitude', 'band': 'time'})
+        arr.coords['time']=[dt.datetime(int(y), int(m), int(d))]
+        arr.attrs['time:units']="Days since %s-%s-%s 00:00:00" % (y, m, d)
+        arr.attrs['crs']="+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs "
+        arr.attrs['created']="%s" % (dt.datetime.now().strftime("%d-%m-%Y"))
+        arr.to_netcdf(nc_version, mode = 'w', format = 'NETCDF4')
         arr.close()
 
         return nc_version
 
     def do_compilation(self, param_datasets, when):
-        DFMC_file = self.netcdf_name_for_date(when)
+        DFMC_file=self.netcdf_name_for_date(when)
 
-        y = when.strftime("%Y")
-        m = when.strftime("%m")
-        d = when.strftime("%d")
+        y=when.strftime("%Y")
+        m=when.strftime("%m")
+        d=when.strftime("%d")
 
-        tempfile = '/tmp/temp%s-%s-%s.nc' % (d, m, y)
+        tempfile='/tmp/temp%s-%s-%s.nc' % (d, m, y)
 
         if len(param_datasets) > 0:
 
@@ -361,14 +354,14 @@ class DeadFuelModel(Model):
 
             logger.debug("\n----> Will open: %s" % f for f in param_datasets)
 
-            with xr.open_mfdataset(param_datasets, concat_dim="observations") as ds:
-                vp = ds["VP3pm"].isel(time=0)
-                tmx = ds["Tmx"].isel(time=0)
-                dfmc = DeadFuelModel.calculate(vp, tmx)
-                dfmc = dfmc.expand_dims('time')
+            with xr.open_mfdataset(param_datasets, concat_dim = "observations") as ds:
+                vp=ds["VP3pm"].isel(time = 0)
+                tmx=ds["Tmx"].isel(time = 0)
+                dfmc=DeadFuelModel.calculate(vp, tmx)
+                dfmc=dfmc.expand_dims('time')
                 logger.debug("Processing data for: %s-%s-%s" % (d, m, y))
-                DFMC = dfmc.to_dataset('DFMC')
-                DFMC.to_netcdf(tempfile, format='NETCDF4')
+                DFMC=dfmc.to_dataset('DFMC')
+                DFMC.to_netcdf(tempfile, format = 'NETCDF4')
                 logger.debug("\n------> Wrote: %s" % tempfile)
                 logger.debug(DFMC)
 
@@ -376,22 +369,22 @@ class DeadFuelModel(Model):
 
             with xr.open_mfdataset(tempfile) as combined:
                 # DFMC.coords['time'] = [dt.datetime(int(y), int(m), int(d))]
-                combined['DFMC'].attrs['DFMC:units'] = "Percentage wet over dry by weight."
-                combined['DFMC'].attrs['long_name'] = "Dead Fuel Moisture Content"
-                combined['DFMC'].attrs['time:units'] = "Days since %s-%s-%s 00:00:00" % (
+                combined['DFMC'].attrs['DFMC:units']="Percentage wet over dry by weight."
+                combined['DFMC'].attrs['long_name']="Dead Fuel Moisture Content"
+                combined['DFMC'].attrs['time:units']="Days since %s-%s-%s 00:00:00" % (
                     y, m, d)
-                combined['DFMC'].attrs['crs'] = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs "
-                combined.attrs['created'] = "%s" % (
+                combined['DFMC'].attrs['crs']="+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs "
+                combined.attrs['created']="%s" % (
                     dt.datetime.now().strftime("%d-%m-%Y"))
-                combined['DFMC'].attrs['output_frequency'] = "daily"
-                combined.attrs['convention'] = "CF-1.4"
-                combined.attrs['references'] = "#refs"
-                combined.attrs['comment'] = "#comments"
-                combined.attrs['var_name'] = self.outputs["readings"]["prefix"]
+                combined['DFMC'].attrs['output_frequency']="daily"
+                combined.attrs['convention']="CF-1.4"
+                combined.attrs['references']="#refs"
+                combined.attrs['comment']="#comments"
+                combined.attrs['var_name']=self.outputs["readings"]["prefix"]
 
                 logger.debug(combined)
 
-                combined.to_netcdf(DFMC_file, mode='w', format='NETCDF4')
+                combined.to_netcdf(DFMC_file, mode = 'w', format = 'NETCDF4')
                 combined.close()
 
             os.remove(tempfile)
@@ -405,23 +398,23 @@ class DeadFuelModel(Model):
 
     async def collect_parameter_data(self, param, when):
         """ Collects input parameters for the model as determined by the metadata. """
-        parameter_dataset_name = None
+        parameter_dataset_name=None
 
         # Only collect from the past!
         if when.date() < dt.datetime.today().date():
-            param = self.parameters[param]
-            file_path = Path(param['path'])
+            param=self.parameters[param]
+            file_path=Path(param['path'])
             if not file_path.is_dir():
                 os.makedirs(file_path)
 
-            parameter_dataset_name = file_path.joinpath(param['prefix'] + "_"
-                                                        + param['dataset'])
+            parameter_dataset_name=file_path.joinpath(param['prefix'] + "_" +
+                                                        param['dataset'])
             if parameter_dataset_name.is_file():
                 return parameter_dataset_name
             else:
-                data_file = file_path.joinpath(param['prefix'] + "_"
-                                               + when.strftime("%Y%m%d")
-                                               + param['suffix'])
+                data_file=file_path.joinpath(param['prefix'] + "_" +
+                                               when.strftime("%Y%m%d") +
+                                               param['suffix'])
 
                 logger.debug(data_file)
 
@@ -487,13 +480,12 @@ class DeadFuelModel(Model):
         d = np.clip(ea - es, None, 0)
         return 6.79 + (27.43 * np.exp(1.05 * d))
 
-    async def get_shaped_timeseries(self, query: ShapeQuery):
+    async def get_shaped_timeseries(self, query: ShapeQuery) -> pd.DataFrame:
         logger.debug(
             "\n--->>> Shape Query Called successfully on %s Model!! <<<---" % self.name)
         sr = await (self.get_shaped_resultcube(query))
         sr.load()
         var = self.outputs['readings']['prefix']
-        dps = []
 
         try:
             logger.debug('Trying to find datapoints.')
@@ -516,6 +508,30 @@ class DeadFuelModel(Model):
         return df
 
     async def get_timeseries_results(self, query: ShapeQuery) -> ModelResult:
-        df = await (self.get_shaped_resultcube(query))
+        df = await (self.get_shaped_timeseries(query))
         geoQ = GeoQuery(query)
         return ModelResult(model_name=self.name, data_points=geoQ.pull_fishnet(df))
+
+    async def get_shapefile_results(self, sq: ShapeQuery):
+        df = await (self.get_shaped_timeseries(query))
+        stored_shp = '/FuelModels/queries/' + uuid4() + '.nc'
+        df.to_file(driver='ESRI Shapefile', filename=stored_shp)
+        return {'download': stored_shp}
+
+    async def get_netcdf_results(self, sq: ShapeQuery):
+        df = await (self.get_shaped_resultcube(query))
+        stored_nc = '/FuelModels/queries/' + uuid4() + '.nc'
+        df.to_netcdf(stored_nc)
+        return {'download': stored_nc}
+        
+    async def get_mp4_results(self, query: ShapeQuery):
+        sr = await (self.get_shaped_resultcube(query))
+        logger.debug(sr)
+
+        df = await self.get_shaped_timeseries(sr)
+
+        mp4 = await (MPEGFormatter.format(
+            sr, self.outputs["readings"]["prefix"]))
+        asyncio.sleep(1)
+        return mp4['download']  # Parsed from dictionary results
+

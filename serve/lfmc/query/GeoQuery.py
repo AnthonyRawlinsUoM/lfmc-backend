@@ -43,7 +43,54 @@ class GeoQuery(ShapeQuery):
         for pos, poly in enumerate(grids):
             self.idx.insert(pos, poly.bounds)
 
-    def pull_fishnet(self, final_stats: pd.DataFrame):
+    def pull_fishnet(self, data):
+
+        final_data = []
+        if len(data) > 0:
+            # Create a dataframe of the results
+            results = pd.DataFrame(
+                data, columns=['moisture_content', 'weight', 'geometry'])
+
+            moisture = results[['moisture_content']].values
+
+            indices = ~pd.isnull(moisture)
+            non_nans = (indices).sum(1)
+
+            if len(non_nans) == 0:
+                logger.debug(
+                    'All moisture values are NaN. No datapoints to gather.')
+                logger.debug(
+                    tabulate(results[['moisture_content', 'weight']]))
+            else:
+                logger.debug(
+                    'Found {} cells with moisture.'.format(len(non_nans)))
+
+                if results[['weight']].values[indices].sum() == 0:
+                    raise ValueError('Cell weights total zero.')
+                else:
+                    # Used for GeoJSON via __geo_interface__
+                    # Confirmed Proj can be like... {'init': 'epsg:3857'} or... wgs84
+                    # areaGDF = gp.GeoDataFrame(results, crs=projection)
+                    area_weighted_average_mc = np.average(
+                        moisture[indices], weights=results[['weight']].values[indices])
+                    mean_mc = np.nanmean(moisture)
+                    min_mc = np.nanmin(moisture)
+                    max_mc = np.nanmax(moisture)
+                    median_mc = np.nanmedian(moisture)
+                    std_mc = np.nanstd(moisture)
+                    median_mc = np.nanmedian(moisture)
+                    count_mc = len(moisture)  # Count NaN cells too??
+
+                    shape_stats.append((t, area_weighted_average_mc,
+                                        mean_mc, min_mc, max_mc, std_mc, median_mc, count_mc))
+
+        logger.debug('Done gathering stats over time.')
+        final_stats = pd.DataFrame(shape_stats, columns=[
+                                   'time', 'area_weighted_average_mc', 'mean_mc', 'min_mc', 'max_mc', 'std_mc', 'median_mc', 'count_mc'])
+        final_stats.set_index('time', inplace=True)
+
+        logger.debug(tabulate(final_stats))
+
         dps = []
         logger.debug('Type of final_stats is: %s' % type(final_stats))
         for row in final_stats.itertuples(index=True, name='Pandas'):
@@ -123,10 +170,13 @@ class GeoQuery(ShapeQuery):
         if self.idx is None:
             self.build_index(grids)
 
-        weights = [[[pos, grids[pos], grids[pos].intersection(self.query.selections[i]),
-                     (grids[pos].intersection(self.query.selections[i]).area / grids[pos].area)]
-                    for pos in self.idx.intersection(self.query.selections[i].bounds)]
-                   for i in range(0, len(self.query.selections))]
+        try:
+            weights = [[[pos, grids[pos], grids[pos].intersection(self.query.selections[i]),
+                         (grids[pos].intersection(self.query.selections[i]).area / grids[pos].area)]
+                        for pos in self.idx.intersection(self.query.selections[i].bounds)]
+                       for i in range(0, len(self.query.selections))]
+        except TopologyException as te:
+            logger.error(te.msg)
 
         agg_weights = dict()
         agg_bounds = dict()
@@ -166,50 +216,9 @@ class GeoQuery(ShapeQuery):
             data = [[mcs[pos], final_weights[pos], agg_geom[pos].wkt]
                     for pos in final_weights]
 
-            if len(data) > 0:
-                # Create a dataframe of the results
-                results = pd.DataFrame(
-                    data, columns=['moisture_content', 'weight', 'geometry'])
-
-                moisture = results[['moisture_content']].values
-
-                indices = ~pd.isnull(moisture)
-                non_nans = (indices).sum(1)
-
-                if len(non_nans) == 0:
-                    logger.debug(
-                        'All moisture values are NaN. No datapoints to gather.')
-                    logger.debug(
-                        tabulate(results[['moisture_content', 'weight']]))
-                else:
-                    logger.debug(
-                        'Found {} cells with moisture.'.format(len(non_nans)))
-
-                    if results[['weight']].values[indices].sum() == 0:
-                        raise ValueError('Cell weights total zero.')
-                    else:
-                        # Used for GeoJSON via __geo_interface__
-                        # Confirmed Proj can be like... {'init': 'epsg:3857'} or... wgs84
-                        # areaGDF = gp.GeoDataFrame(results, crs=projection)
-                        area_weighted_average_mc = np.average(
-                            moisture[indices], weights=results[['weight']].values[indices])
-                        mean_mc = np.nanmean(moisture)
-                        min_mc = np.nanmin(moisture)
-                        max_mc = np.nanmax(moisture)
-                        median_mc = np.nanmedian(moisture)
-                        std_mc = np.nanstd(moisture)
-                        median_mc = np.nanmedian(moisture)
-                        count_mc = len(moisture)  # Count NaN cells too??
-
-                        shape_stats.append((t, area_weighted_average_mc,
-                                            mean_mc, min_mc, max_mc, std_mc, median_mc, count_mc))
-
-        logger.debug('Done gathering stats over time.')
-        final_stats = pd.DataFrame(shape_stats, columns=[
-                                   'time', 'area_weighted_average_mc', 'mean_mc', 'min_mc', 'max_mc', 'std_mc', 'median_mc', 'count_mc'])
-        final_stats.set_index('time', inplace=True)
-
-        logger.debug(tabulate(final_stats))
         # This would be much better as a GeoDataFrame and export to JSON using __geo_interface__
+        # [Moisture, weight, geometry]
+        return data
 
-        return final_stats
+    def fishnet_results_as_GeoDataFrame(self, data):
+        return gp.GeoDataFrame(data, columns=['moisture_content', 'weight', 'geometry'])

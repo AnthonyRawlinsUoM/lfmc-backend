@@ -2,14 +2,15 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import pandas as pd
 from uuid import uuid4
+import asyncio
 
 
 class MPEGFormatter:
 
-    def as_format(self, data, variable):
+    async def as_format(self, data, variable):
 
         video_path = "/FuelModels/queries/"
-        video_name = uuid4 + ".mp4"
+        video_name = uuid4() + ".mp4"
         video_filepath = video_path + video_name
 
         # Writer = animation.writers['ffmpeg']
@@ -42,4 +43,5 @@ class MPEGFormatter:
             fig, frames, interval=50, blit=True, repeat_delay=1000)
         vid.save(video_filepath, writer='ffmpeg', codec='mpeg4')
         logger.debug("\n--> Successfully wrote temp MP4 file.")
-        return video_name
+
+        return {'download': video_name}
