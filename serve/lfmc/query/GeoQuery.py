@@ -43,9 +43,9 @@ class GeoQuery(ShapeQuery):
         for pos, poly in enumerate(grids):
             self.idx.insert(pos, poly.bounds)
 
-    def pull_fishnet(self, final_stats):
-
+    def pull_fishnet(self, final_stats: pd.DataFrame):
         dps = []
+        logger.debug('Type of final_stats is: %s' % type(final_stats))
         for row in final_stats.itertuples(index=True, name='Pandas'):
             # logger.debug(row.Index.isoformat().replace('.000000000', '.000Z'))
             dps.append(DataPoint(observation_time=row.Index.isoformat() + '.000Z',
@@ -59,7 +59,7 @@ class GeoQuery(ShapeQuery):
                                  count=row.count_mc))
         return dps
 
-    def cast_fishnet(self, projection, df):
+    def cast_fishnet(self, projection, df) -> pd.DataFrame:
         """ dataframe from dataframe  """
 
         logger.debug('Called cast fishnet.')
