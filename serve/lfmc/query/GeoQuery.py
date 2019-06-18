@@ -46,7 +46,12 @@ class GeoQuery(ShapeQuery):
     def pull_fishnet(self, final_stats: pd.DataFrame):
         dps = []
         logger.debug('Type of final_stats is: %s' % type(final_stats))
-        for row in final_stats.itertuples(index=True, name='Pandas'):
+
+        logger.debug(tabulate(final_stats))
+
+        logger.debug(final_stats.to_dataframe())
+
+        for row in final_stats.to_dataframe().itertuples(index=True, name='Pandas'):
             # logger.debug(row.Index.isoformat().replace('.000000000', '.000Z'))
             dps.append(DataPoint(observation_time=row.Index.isoformat() + '.000Z',
                                  value=row.median_mc,
@@ -207,7 +212,7 @@ class GeoQuery(ShapeQuery):
         logger.debug('Done gathering stats over time.')
         final_stats = pd.DataFrame(shape_stats, columns=[
                                    'time', 'area_weighted_average_mc', 'mean_mc', 'min_mc', 'max_mc', 'std_mc', 'median_mc', 'count_mc'])
-        final_stats.set_index('time', inplace=True)
+        final_stats = final_stats.set_index('time', inplace=True)
 
         logger.debug(tabulate(final_stats))
         # This would be much better as a GeoDataFrame and export to JSON using __geo_interface__
