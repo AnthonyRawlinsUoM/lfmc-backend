@@ -5,6 +5,7 @@ from celery import task
 from celery import Celery
 
 from serve.lfmc.query.ShapeQuery import ShapeQuery
+from serve.lfmc.query.GeoQuery import GeoQuery
 from serve.lfmc.models.ModelRegister import ModelRegister
 from serve.lfmc.results.ModelResult import ModelResult
 from serve.lfmc.results.MPEGFormatter import MPEGFormatter
