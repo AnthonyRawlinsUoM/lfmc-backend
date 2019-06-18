@@ -224,6 +224,7 @@ class GeoQuery(ShapeQuery):
                 # Create a dataframe of the results
                 results = gp.GeoDataFrame(
                     data, columns=['time', 'moisture_content', 'weight', 'geometry'])
+                results.set_index('time', inplace=True)
                 dataframesList.append(results)
 
         rdf = gpd.GeoDataFrame(
