@@ -45,7 +45,9 @@ class GeoQuery(ShapeQuery):
 
     def pull_fishnet(self, results: gp.GeoDataFrame):
 
+        logger.debug('Pulling the fishnet now...')
         logger.debug(results)
+        logger.debug('==========================')
 
         moisture = results[['moisture_content']].values
 
@@ -195,6 +197,7 @@ class GeoQuery(ShapeQuery):
                     agg_geom[pos] = unary_union(
                         [agg_geom.get(pos, Polygon()), sect])
 
+        rdf = []
         shape_stats = []
         dataframesList = []
         for t in sorted(df['time'].values):
@@ -226,6 +229,9 @@ class GeoQuery(ShapeQuery):
                     data, columns=['time', 'moisture_content', 'weight', 'geometry'])
                 results.set_index('time', inplace=True)
                 dataframesList.append(results)
+                logger.debug('added timeslice')
+            else:
+                logger.error('EMPTY DATA in time slice')
 
         rdf = gpd.GeoDataFrame(
             pd.concat(dataframesList, ignore_index=True), crs=dataframesList[0].crs)

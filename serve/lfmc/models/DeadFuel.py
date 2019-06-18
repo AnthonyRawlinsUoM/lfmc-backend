@@ -518,4 +518,5 @@ class DeadFuelModel(Model):
     async def get_timeseries_results(self, query: ShapeQuery) -> ModelResult:
         df = await (self.get_shaped_resultcube(query))
         geoQ = GeoQuery(query)
-        return ModelResult(model_name=self.name, data_points=geoQ.pull_fishnet(df))
+        dps = geoQ.pull_fishnet(df)
+        return ModelResult(model_name=self.name, data_points=dps)
