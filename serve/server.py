@@ -223,63 +223,63 @@ def get_progress(uuid):
     return o
 
 
-@hug.cli()
-@hug.get('/fuel.json', versions=1, output=suffix_output)
-@hug.post('/fuel.json', versions=1, output=suffix_output)
-async def fuel_json(geo_json,
-                    start: fields.String(),
-                    finish: fields.String(),
-                    models: hug.types.delimited_list(','),
-                    hashkey=None):
-    """
-    :param geo_json:
-    :param start:
-    :param finish:
-    :param models:
-    :param hashkey:
-    :return:
-    """
-    mr = ModelRegister()
-
-    try:
-        query = ShapeQuery(start=start,
-                           finish=finish,
-                           geo_json=geo_json)
-    except ValueError as ve:
-
-        return {'ValueError': '500'}
-
-    logger.debug(query.temporal.start.strftime("%Y%m%d"))
-    logger.debug(query.temporal.finish.strftime("%Y%m%d"))
-
-    # Which model are we working with?
-
-    if models is None:
-        return {'ModelError': 'No suitable model found for: ' + models}
-    elif len(models) > 1:
-        raise ValueError(
-            "LFMC API Server got Multiple model request. This shouldn't happen!")
-    else:
-        model = models[0]
-        logger.debug("Responding to JSON query on model: %s" % model)
-        model_future = await asyncio.gather(*[(mr.get(model)).get_shaped_timeseries(query)])
-        schema = ModelResultSchema(many=True)
-        response, errors = schema.dump(model_future)
-
-        # HACK to fix hashkey
-        response[0]['hashkey'] = hashkey
-
-        asyncio.sleep(0.1)
-        if dev.DEBUG:
-            logger.debug(response)
-
-        if len(errors) > 0:
-            logger.debug(errors)
-            return errors
-        else:
-            # Default Response
-            query.logResponse()
-            return response
+# @hug.cli()
+# @hug.get('/fuel.json', versions=1, output=suffix_output)
+# @hug.post('/fuel.json', versions=1, output=suffix_output)
+# async def fuel_json(geo_json,
+#                     start: fields.String(),
+#                     finish: fields.String(),
+#                     models: hug.types.delimited_list(','),
+#                     hashkey=None):
+#     """
+#     :param geo_json:
+#     :param start:
+#     :param finish:
+#     :param models:
+#     :param hashkey:
+#     :return:
+#     """
+#     mr = ModelRegister()
+#
+#     try:
+#         query = ShapeQuery(start=start,
+#                            finish=finish,
+#                            geo_json=geo_json)
+#     except ValueError as ve:
+#
+#         return {'ValueError': '500'}
+#
+#     logger.debug(query.temporal.start.strftime("%Y%m%d"))
+#     logger.debug(query.temporal.finish.strftime("%Y%m%d"))
+#
+#     # Which model are we working with?
+#
+#     if models is None:
+#         return {'ModelError': 'No suitable model found for: ' + models}
+#     elif len(models) > 1:
+#         raise ValueError(
+#             "LFMC API Server got Multiple model request. This shouldn't happen!")
+#     else:
+#         model = models[0]
+#         logger.debug("Responding to JSON query on model: %s" % model)
+#         model_future = await asyncio.gather(*[(mr.get(model)).get_shaped_timeseries(query)])
+#         schema = ModelResultSchema(many=True)
+#         response, errors = schema.dump(model_future)
+#
+#         # HACK to fix hashkey
+#         response[0]['hashkey'] = hashkey
+#
+#         asyncio.sleep(0.1)
+#         if dev.DEBUG:
+#             logger.debug(response)
+#
+#         if len(errors) > 0:
+#             logger.debug(errors)
+#             return errors
+#         else:
+#             # Default Response
+#             query.logResponse()
+#             return response
 
 
 @hug.exception(Exception)
