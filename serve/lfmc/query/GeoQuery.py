@@ -33,8 +33,8 @@ class GeoQuery(ShapeQuery):
     vicgrid94 = pyproj.Proj("+init=EPSG:3111")
     wgs84 = pyproj.Proj("+init=EPSG:4326")
 
-    def __init__(self, shape_query):
-        self.query = shape_query
+    def __init__(self, start, finish, geo_json, weighted=False):
+        super().__init__(start=start, finish=finish, geo_json=geo_json)
         self.idx = None
 
     def build_index(self, grids):
@@ -93,7 +93,10 @@ class GeoQuery(ShapeQuery):
 
         dps = []
         logger.debug('Type of final_stats is: %s' % type(final_stats))
-        for row in final_stats.itertuples(index=True, name='Pandas'):
+        logger.debug(tabulate(final_stats))
+        logger.debug(final_stats.to_dataframe())
+
+        for row in final_stats.to_dataframe().itertuples(index=True, name='Pandas'):
             # logger.debug(row.Index.isoformat().replace('.000000000', '.000Z'))
             dps.append(DataPoint(observation_time=row.Index.isoformat() + '.000Z',
                                  value=row.median_mc,
@@ -106,7 +109,7 @@ class GeoQuery(ShapeQuery):
                                  count=row.count_mc))
         return dps
 
-    def cast_fishnet(self, projection, df) -> pd.DataFrame:
+    def cast_fishnet(self, projection, df) -> gp.GeoDataFrame:
         """ dataframe from dataframe  """
 
         logger.debug('Called cast fishnet.')
@@ -158,13 +161,21 @@ class GeoQuery(ShapeQuery):
         vlines = [((loi, lat1), (loi, lat2))
                   for lat1, lat2 in zip(lats[:-1], lats[1:]) for loi in lons]
 
-        # logger.debug(hlines)
-        # logger.debug(vlines)
-        # logger.debug(MultiLineString(hlines + vlines))
+        # -|--|--|-
+        # -|--|--|-
+        # -|--|--|-
+        # -|--|--|-
+        # -|--|--|-
 
         grids = list(polygonize(MultiLineString(hlines + vlines)))
 
-        # logger.debug(len(grids))
+        # |-----------|
+        # |--|--|--|--|
+        # |--|--|--|--|
+        # |--|--|--|--|
+        # |--|--|--|--|
+        # |--|--|--|--|
+        # |-----------|
 
         # Do only once
         if self.idx is None:
@@ -191,8 +202,9 @@ class GeoQuery(ShapeQuery):
                     agg_geom[pos] = unary_union(
                         [agg_geom.get(pos, Polygon()), sect])
 
+        rdf = []
         shape_stats = []
-
+        dataframesList = []
         for t in sorted(df['time'].values):
 
             logger.debug('Doing timeslice...')
@@ -213,7 +225,7 @@ class GeoQuery(ShapeQuery):
                     final_weights[pos] = weight
                     mcs[pos] = cells[0]
 
-            data = [[mcs[pos], final_weights[pos], agg_geom[pos].wkt]
+            data = [[t, mcs[pos], final_weights[pos], agg_geom[pos].wkt]
                     for pos in final_weights]
 
         # This would be much better as a GeoDataFrame and export to JSON using __geo_interface__

@@ -20,8 +20,10 @@ from serve.lfmc.results.ModelResult import ModelResult
 from serve.lfmc.query.ShapeQuery import ShapeQuery
 from serve.lfmc.query.GeoQuery import GeoQuery
 from serve.lfmc.query.SpatioTemporalQuery import SpatioTemporalQuery
+
 import pickle
 import regionmask
+import geopandas as gp
 
 from uuid import uuid4
 
@@ -510,7 +512,8 @@ class DeadFuelModel(Model):
     async def get_timeseries_results(self, query: ShapeQuery) -> ModelResult:
         df = await (self.get_shaped_timeseries(query))
         geoQ = GeoQuery(query)
-        return ModelResult(model_name=self.name, data_points=geoQ.pull_fishnet(df))
+        dps = geoQ.pull_fishnet(df)
+        return ModelResult(model_name=self.name, data_points=dps)
 
     async def get_shapefile_results(self, sq: ShapeQuery):
         df = await (self.get_shaped_timeseries(query))

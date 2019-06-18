@@ -5,6 +5,7 @@ from celery import task
 from celery import Celery
 
 from serve.lfmc.query.ShapeQuery import ShapeQuery
+from serve.lfmc.query.GeoQuery import GeoQuery
 from serve.lfmc.models.ModelRegister import ModelRegister
 from serve.lfmc.results.ModelResult import ModelResult
 from serve.lfmc.results.MPEGFormatter import MPEGFormatter
@@ -38,9 +39,9 @@ app.Task.resultrepr_maxsize = 2000
 def do_netcdf(geo_json, start, finish, model):
     result = {}
     try:
-        sq = ShapeQuery(geo_json=geo_json,
-                        start=start,
-                        finish=finish)
+        sq = GeoQuery(geo_json=geo_json,
+                      start=start,
+                      finish=finish)
         mr = ModelRegister()
         model = mr.get(model)
 
@@ -64,9 +65,9 @@ def do_netcdf(geo_json, start, finish, model):
 def do_mp4(geo_json, start, finish, model):
     result = {}
     try:
-        sq = ShapeQuery(geo_json=geo_json,
-                        start=start,
-                        finish=finish)
+        sq = GeoQuery(geo_json=geo_json,
+                      start=start,
+                      finish=finish)
         mr = ModelRegister()
         model = mr.get(model)
 
@@ -92,9 +93,9 @@ def do_mp4(geo_json, start, finish, model):
 def do_query(geo_json, start, finish, model):
     result = {}
     try:
-        sq = ShapeQuery(geo_json=geo_json,
-                        start=start,
-                        finish=finish)
+        sq = GeoQuery(geo_json=geo_json,
+                      start=start,
+                      finish=finish)
         mr = ModelRegister()
         model = mr.get(model)
 
