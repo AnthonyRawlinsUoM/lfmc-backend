@@ -33,12 +33,7 @@ class GeoQuery(ShapeQuery):
     vicgrid94 = pyproj.Proj("+init=EPSG:3111")
     wgs84 = pyproj.Proj("+init=EPSG:4326")
 
-    def __init__(self, start, finish, geo_json):
-        self.query = ShapeQuery(start, finish, geo_json)
-        self.idx = None
-
-    def __init__(self, shape_query):
-        self.query = shape_query
+    def __init__(self, start, finish, geo_json, weighted=False):
         self.idx = None
 
     def build_index(self, grids):
