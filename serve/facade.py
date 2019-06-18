@@ -6,7 +6,8 @@ from celery import Celery
 
 from serve.lfmc.query.ShapeQuery import ShapeQuery
 from serve.lfmc.models.ModelRegister import ModelRegister
-from serve.lfmc.results import ModelResult, MPEGFormatter
+from serve.lfmc.results.ModelResult import ModelResult
+from serve.lfmc.results.MPEGFormatter import MPEGFormatter
 from serve.lfmc.results.ModelResult import ModelResultSchema
 from serve.lfmc.process.Conversion import Conversion
 
@@ -78,9 +79,12 @@ def do_mp4(geo_json, start, finish, model):
 
     # Return result as filename string
     # HUG will stream the binary data
+    logger.debug(result)
 
     # TODO - Double Check model.code is always var_name of DataSet!
-    return MPEGFormatter.format(result, model.code)
+    mf = MPEGFormatter()
+
+    return mf.as_format(result, model.code)
 
 ################
 # JSON Results #
@@ -99,7 +103,7 @@ def do_query(geo_json, start, finish, model):
 
         looped = asyncio.new_event_loop()
         result = looped.run_until_complete(
-            model.get_shaped_timeseries(sq))
+            model.get_timeseries_results(sq))
     except ValueError as e:
         logger.error("ValueError")
         # result['error'] = json.dumps(e)

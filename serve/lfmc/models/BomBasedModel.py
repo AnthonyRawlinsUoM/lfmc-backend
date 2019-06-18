@@ -200,7 +200,7 @@ class BomBasedModel(Model):
             self.archive_name("*")) if Path(f).is_file()]
         return archives
 
-    async def get_shaped_timeseries(self, query: ShapeQuery) -> ModelResult:
+    async def get_shaped_timeseries(self, query: ShapeQuery):
         logger.debug(
             "\n--->>> Shape Query Called successfully on %s Model!! <<<---" % self.name)
         sr = await (self.get_shaped_resultcube(query))
@@ -211,8 +211,7 @@ class BomBasedModel(Model):
             logger.debug('Trying to find datapoints.')
 
             geoQ = GeoQuery(query)
-            dps = geoQ.cast_fishnet({'init': 'EPSG:3111'}, sr[var])
-            logger.debug(dps)
+            df = geoQ.cast_fishnet({'init': 'EPSG:3111'}, sr[var])
 
         except FileNotFoundError:
             logger.debug('Files not found for date range.')
@@ -221,10 +220,15 @@ class BomBasedModel(Model):
         except OSError as oe:
             logger.debug(oe)
 
-        if len(dps) == 0:
+        if len(df) == 0:
             logger.debug('Found no datapoints.')
             logger.debug(sr)
 
         asyncio.sleep(1)
 
-        return ModelResult(model_name=self.name, data_points=dps)
+        return df
+
+    async def get_timeseries_results(self, query: ShapeQuery) -> ModelResult:
+        df = await (self.get_shaped_resultcube(query))
+        geoQ = GeoQuery(query)
+        return ModelResult(model_name=self.name, data_points=geoQ.pull_fishnet(df))

@@ -487,19 +487,19 @@ class DeadFuelModel(Model):
         d = np.clip(ea - es, None, 0)
         return 6.79 + (27.43 * np.exp(1.05 * d))
 
-    async def get_shaped_timeseries(self, query: ShapeQuery) -> ModelResult:
+    async def get_shaped_timeseries(self, query: ShapeQuery):
         logger.debug(
             "\n--->>> Shape Query Called successfully on %s Model!! <<<---" % self.name)
         sr = await (self.get_shaped_resultcube(query))
         sr.load()
         var = self.outputs['readings']['prefix']
         dps = []
+
         try:
             logger.debug('Trying to find datapoints.')
 
             geoQ = GeoQuery(query)
-            dps = geoQ.cast_fishnet({'init': 'EPSG:4326'}, sr[var])
-            logger.debug(dps)
+            df = geoQ.cast_fishnet({'init': 'EPSG:4326'}, sr[var])
 
         except FileNotFoundError:
             logger.debug('Files not found for date range.')
@@ -508,10 +508,14 @@ class DeadFuelModel(Model):
         except OSError as oe:
             logger.debug(oe)
 
-        if len(dps) == 0:
+        if len(df) == 0:
             logger.debug('Found no datapoints.')
             logger.debug(sr)
 
         asyncio.sleep(1)
+        return df
 
-        return ModelResult(model_name=self.name, data_points=dps)
+    async def get_timeseries_results(self, query: ShapeQuery) -> ModelResult:
+        df = await (self.get_shaped_resultcube(query))
+        geoQ = GeoQuery(query)
+        return ModelResult(model_name=self.name, data_points=geoQ.pull_fishnet(df))

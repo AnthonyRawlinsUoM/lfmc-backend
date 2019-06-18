@@ -1,21 +1,15 @@
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+import pandas as pd
+from uuid import uuid4
 
 
 class MPEGFormatter:
 
-    @staticmethod
-    async def format(data, variable):
+    def as_format(self, data, variable):
 
-        # TODO - uuid filenames
-        # TODO - Sandbox outputs for users
         video_path = "/FuelModels/queries/"
-
-        if data[variable].name is not None:
-            video_name = "temp%s.mp4" % data[variable].name
-        else:
-            video_name = "temp.mp4"
-
+        video_name = uuid4 + ".mp4"
         video_filepath = video_path + video_name
 
         # Writer = animation.writers['ffmpeg']

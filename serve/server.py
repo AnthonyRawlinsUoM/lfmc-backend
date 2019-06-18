@@ -81,6 +81,11 @@ def revoke(uuid):
 #     return mr.validate_catalog()
 
 
+@hug.directive()
+def ip(request=None, **kwargs):
+    return request.access_route[0]
+
+
 @hug.cli()
 @api.urls('/models/idents', versions=range(1, 2), content_output=hug.output_format.pretty_json)
 def model_idents():
@@ -126,7 +131,10 @@ def submit_mp4_query(geo_json,
         [do_mp4.s(geo_json, start, finish, model) for model in models])
 
     res = final_result.delay()  # Removed 1 minute from now
-    return [{'uuid': r.id} for r in res.children]
+
+    resulting_task_uuids = [{'uuid': r.id} for r in res.children]
+
+    return resulting_task_uuids
 
 ###############
 # NetCDF Code #

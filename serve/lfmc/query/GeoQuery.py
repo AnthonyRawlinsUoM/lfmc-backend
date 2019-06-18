@@ -43,7 +43,25 @@ class GeoQuery(ShapeQuery):
         for pos, poly in enumerate(grids):
             self.idx.insert(pos, poly.bounds)
 
+    def pull_fishnet(self, final_stats):
+
+        dps = []
+        for row in final_stats.itertuples(index=True, name='Pandas'):
+            # logger.debug(row.Index.isoformat().replace('.000000000', '.000Z'))
+            dps.append(DataPoint(observation_time=row.Index.isoformat() + '.000Z',
+                                 value=row.median_mc,
+                                 mean=row.mean_mc,
+                                 weighted_mean=row.area_weighted_average_mc,
+                                 minimum=row.min_mc,
+                                 maximum=row.max_mc,
+                                 deviation=row.std_mc,
+                                 median=row.median_mc,
+                                 count=row.count_mc))
+        return dps
+
     def cast_fishnet(self, projection, df):
+        """ dataframe from dataframe  """
+
         logger.debug('Called cast fishnet.')
         cell_size = 1.0  # Default: 5 seconds
 
@@ -194,16 +212,4 @@ class GeoQuery(ShapeQuery):
         logger.debug(tabulate(final_stats))
         # This would be much better as a GeoDataFrame and export to JSON using __geo_interface__
 
-        dps = []
-        for row in final_stats.itertuples(index=True, name='Pandas'):
-            # logger.debug(row.Index.isoformat().replace('.000000000', '.000Z'))
-            dps.append(DataPoint(observation_time=row.Index.isoformat() + '.000Z',
-                                 value=row.median_mc,
-                                 mean=row.mean_mc,
-                                 weighted_mean=row.area_weighted_average_mc,
-                                 minimum=row.min_mc,
-                                 maximum=row.max_mc,
-                                 deviation=row.std_mc,
-                                 median=row.median_mc,
-                                 count=row.count_mc))
-        return dps
+        return final_stats
