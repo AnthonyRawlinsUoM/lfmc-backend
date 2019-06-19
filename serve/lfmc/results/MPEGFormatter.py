@@ -41,7 +41,7 @@ class MPEGFormatter:
             else:
                 im = b[variable]
 
-            plt.text(3, 1, "%s" % b["time"].values)
+            # plt.text(3, 1, "%s" % b["time"].values)
             frame = plt.imshow(im, cmap='viridis_r', animated=True)
             # Push onto array of frames
             frames.append([frame])

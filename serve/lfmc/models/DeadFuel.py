@@ -212,11 +212,29 @@ class DeadFuelModel(Model):
                 lat1, lon1, lat2, lon2 = shape_query.spatial.expanded(
                     0.1)
 
+                print("lat1: %s" % lat1)
+                print("lon1: %s" % lon1)
+                print("lat2: %s" % lat2)
+                print("lon2: %s" % lon2)
+
+                logger.debug("lat1: %s" % lat1)
+                logger.debug("lon1: %s" % lon1)
+                logger.debug("lat2: %s" % lat2)
+                logger.debug("lon2: %s" % lon2)
+
                 start = shape_query.temporal.start.strftime("%Y-%m-%d")
                 finish = shape_query.temporal.finish.strftime("%Y-%m-%d")
 
                 sr = sr.sel(time=slice(start, finish), latitude=slice(
                     lat1, lat2), longitude=slice(lon1, lon2), drop=True)
+
+                logger.debug(sr)
+
+                # reverse lat1 & lat2 because of southern hemisphere negative values?
+                sr2 = sr.sel(time=slice(start, finish), latitude=slice(
+                    lat2, lat1), longitude=slice(lon1, lon2), drop=True)
+
+                logger.debug(sr2)
 
             return sr
         else:
@@ -477,6 +495,7 @@ class DeadFuelModel(Model):
 
     async def get_netcdf_results(self, sq: ShapeQuery):
         df = await (self.get_shaped_resultcube(sq))
+        logger.debug(df)
         stored_nc = '/FuelModels/queries/' + str(uuid4()) + '.nc'
         df.to_netcdf(stored_nc, format='NETCDF4')
         return stored_nc
