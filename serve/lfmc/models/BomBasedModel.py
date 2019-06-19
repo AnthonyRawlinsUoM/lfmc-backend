@@ -8,8 +8,9 @@ import xarray as xr
 from pathlib2 import Path
 import serve.lfmc.config.debug as dev
 from serve.lfmc.models.Model import Model
-from serve.lfmc.query import ShapeQuery
+from serve.lfmc.query.ShapeQuery import ShapeQuery
 from serve.lfmc.query.GeoQuery import GeoQuery
+
 from serve.lfmc.results.DataPoint import DataPoint
 from serve.lfmc.results.MPEGFormatter import MPEGFormatter
 from serve.lfmc.results.ModelResult import ModelResult

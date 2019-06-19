@@ -16,7 +16,6 @@ from tabulate import tabulate
 
 from serve.lfmc.results.DataPoint import DataPoint
 from serve.lfmc.query.ShapeQuery import ShapeQuery
-from serve.lfmc.query.GeoQuery import GeoQuery
 
 import logging
 logging.basicConfig()
