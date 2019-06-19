@@ -7,10 +7,10 @@ import asyncio
 
 class MPEGFormatter:
 
-    async def as_format(self, data, variable):
+    async def format(self, data, variable):
 
         video_path = "/FuelModels/queries/"
-        video_name = uuid4() + ".mp4"
+        video_name = str(uuid4()) + ".mp4"
         video_filepath = video_path + video_name
 
         # Writer = animation.writers['ffmpeg']

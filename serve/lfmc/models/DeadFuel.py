@@ -223,55 +223,6 @@ class DeadFuelModel(Model):
             logger.debug("No files available/gathered for that space/time.")
             return xr.DataArray([])
 
-    # async def get_resultcube(self, query: SpatioTemporalQuery) -> xr.DataArray:
-    #     """
-    #     Does not guarantee a raster stack result.
-    #     Quite possibly a jaggy edge.
-    #     Essentially a subset of points only.
-    #     """
-    #
-    #     sr = None
-    #     fs = await asyncio.gather(*[self.dataset_files(when) for when in query.temporal.dates()])
-    #     asyncio.sleep(1)
-    #     if len(fs) > 0:
-    #         with xr.open_mfdataset(fs) as ds:
-    #             if "observations" in ds.dims:
-    #                 ds = ds.squeeze("observations")
-    #
-    #             # expand coverage to tolerance
-    #             # ensures single point returns at least 1 cell
-    #             # also ensures ds slicing will work correctly
-    #             lat1, lon1, lat2, lon2 = query.spatial.expanded(
-    #                 0.05)  # <-- TODO - Remove magic number and get spatial pixel resolution from metadata
-    #
-    #             # restrict coverage to extents of ds
-    #             lat1 = max(lat1, ds["latitude"].min())
-    #             lon1 = max(lon1, ds["longitude"].min())
-    #             lat2 = min(lat2, ds["latitude"].max())
-    #             lon2 = min(lon2, ds["longitude"].max())
-    #
-    #             sr = ds.sel(latitude=slice(lat1, lat2),
-    #                         longitude=slice(lon1, lon2))
-    #             sr.load()
-    #
-    #     return sr
-
-    # async def get_timeseries(self, query: SpatioTemporalQuery) -> ModelResult:
-    #     """
-    #     Essentially just time slicing the resultcube.
-    #     DataPoint actually handles the creation of values from stats.
-    #     :param query:
-    #     :return:
-    #     """
-    #     logger.debug(
-    #         "--->>> SpatioTemporal Query Called on %s Model!! <<<---" % self.name)
-    #     sr = await (self.get_resultcube(query))
-    #     sr.load()
-    #     asyncio.sleep(1)
-    #     dps = [self.get_datapoint_for_param(b=sr.isel(time=t), param="DFMC")
-    #            for t in range(0, len(sr["time"]))]
-    #     return ModelResult(model_name=self.name, data_points=dps)
-
     async def consolidate_year(self, y):
         with open(Model.path() + 'australia.pickle', 'rb') as pickled_australia:
             australia = pickle.load(pickled_australia)
@@ -412,14 +363,14 @@ class DeadFuelModel(Model):
             if not file_path.is_dir():
                 os.makedirs(file_path)
 
-            parameter_dataset_name = file_path.joinpath(param['prefix'] + "_" +
-                                                        param['dataset'])
+            parameter_dataset_name = file_path.joinpath(param['prefix'] + "_"
+                                                        + param['dataset'])
             if parameter_dataset_name.is_file():
                 return parameter_dataset_name
             else:
-                data_file = file_path.joinpath(param['prefix'] + "_" +
-                                              when.strftime("%Y%m%d") +
-                                               param['suffix'])
+                data_file = file_path.joinpath(param['prefix'] + "_"
+                                              + when.strftime("%Y%m%d")
+                                               + param['suffix'])
 
                 logger.debug(data_file)
 
@@ -533,8 +484,6 @@ class DeadFuelModel(Model):
     async def get_mp4_results(self, query: ShapeQuery):
         sr = await (self.get_shaped_resultcube(query))
         logger.debug(sr)
-
-        # df = await self.get_shaped_timeseries(sr)
 
         mp4 = await (MPEGFormatter.format(
             sr, self.outputs["readings"]["prefix"]))
