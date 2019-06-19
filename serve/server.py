@@ -55,7 +55,6 @@ api = hug.get(on_invalid=hug.redirect.not_found)
 
 suffix_output = hug.output_format.suffix({'.json': hug.output_format.pretty_json,
                                           '.mp4': hug.output_format.mp4_video,
-                                          '.mov': hug.output_format.mov_video,
                                           '.nc': hug.output_format.file})
 
 content_output = hug.output_format.on_content_type(
@@ -147,6 +146,7 @@ def submit_mp4_query(geo_json,
 def result_netcdf(uuid):
     res = AsyncResult(uuid, app=app)
     if res.state == 'SUCCESS':
+        logger.debug(res)
         return res.get()
 
 

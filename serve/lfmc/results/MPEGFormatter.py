@@ -52,4 +52,4 @@ class MPEGFormatter:
         vid.save(video_filepath, writer='ffmpeg', codec='mpeg4')
         logger.debug("\n--> Successfully wrote temp MP4 file.")
 
-        return {'download': video_name}
+        return video_filepath

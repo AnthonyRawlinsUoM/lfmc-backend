@@ -197,6 +197,8 @@ class DeadFuelModel(Model):
         fs = list(
             set([f for f in fs if (f is not None and Path(f).is_file())]))
 
+        sr1 = xr.DataArray([])
+
         asyncio.sleep(1)
         if len(fs) > 0:
             logger.debug(fs)
@@ -207,24 +209,23 @@ class DeadFuelModel(Model):
                     sr = ds.squeeze("observations")
                 else:
                     sr = ds
-                logger.debug(sr)
+                try:
+                    lat1, lon1, lat2, lon2 = shape_query.spatial.expanded(0.1)
 
-                lat1, lon1, lat2, lon2 = shape_query.spatial.expanded(
-                    0.1)
+                    logger.debug("lat1: %s" % lat1)
+                    logger.debug("lon1: %s" % lon1)
+                    logger.debug("lat1: %s" % lat2)
+                    logger.debug("lon2: %s" % lon2)
 
-                start = shape_query.temporal.start.strftime("%Y-%m-%d")
-                finish = shape_query.temporal.finish.strftime("%Y-%m-%d")
+                    start = shape_query.temporal.start.strftime("%Y-%m-%d")
+                    finish = shape_query.temporal.finish.strftime("%Y-%m-%d")
 
-                sr1 = sr.sel(time=slice(start, finish), latitude=slice(
-                    lat1, lat2), longitude=slice(lon1, lon2))
+                    # reverse lat1 & lat2 because of southern hemisphere negative values!!
+                    sr1 = sr.sel(time=slice(start, finish), latitude=slice(
+                        lat2, lat1), longitude=slice(lon1, lon2))
 
-                logger.debug(sr1)
-
-                # # reverse lat1 & lat2 because of southern hemisphere negative values?
-                # sr2 = sr['DFMC'].sel(time=slice(start, finish), latitude=slice(
-                #     lat2, lat1), longitude=slice(lon1, lon2))
-
-                # logger.debug(sr2)
+                except ValueError as ve:
+                    logger.error(ve)
 
             return sr1
         else:
@@ -371,14 +372,14 @@ class DeadFuelModel(Model):
             if not file_path.is_dir():
                 os.makedirs(file_path)
 
-            parameter_dataset_name = file_path.joinpath(param['prefix'] + "_" +
-                                                        param['dataset'])
+            parameter_dataset_name = file_path.joinpath(param['prefix'] + "_"
+                                                        + param['dataset'])
             if parameter_dataset_name.is_file():
                 return parameter_dataset_name
             else:
-                data_file = file_path.joinpath(param['prefix'] + "_" +
-                                              when.strftime("%Y%m%d") +
-                                               param['suffix'])
+                data_file = file_path.joinpath(param['prefix'] + "_"
+                                              + when.strftime("%Y%m%d")
+                                               + param['suffix'])
 
                 logger.debug(data_file)
 
@@ -500,4 +501,4 @@ class DeadFuelModel(Model):
         logger.debug(mp4)
 
         asyncio.sleep(1)
-        return mp4['download']  # Parsed from dictionary results
+        return mp4  # Parsed from dictionary results
