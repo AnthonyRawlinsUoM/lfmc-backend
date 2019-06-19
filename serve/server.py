@@ -68,7 +68,7 @@ app.Task.resultrepr_maxsize = 2000
 
 logger.debug(app)
 
-with open(Path(os.getcwd()).joinpath('../VERSION'), 'r') as vers:
+with open(Path(os.getcwd()).joinpath('VERSION'), 'r') as vers:
     API_VERSION = vers.read()
 
 
