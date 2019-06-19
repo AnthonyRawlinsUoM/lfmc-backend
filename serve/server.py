@@ -3,6 +3,7 @@
 import hug
 import asyncio
 import base64
+from pathlib import Path
 from marshmallow import fields, pprint
 from rx import Observer
 from rx import Observable
@@ -66,6 +67,9 @@ app = Celery('facade',
 app.Task.resultrepr_maxsize = 2000
 
 logger.debug(app)
+
+with open(Path(os.getcwd()).joinpath('../VERSION'), 'r') as vers:
+    API_VERSION = vers.read()
 
 
 @api.get('/revoke', version=1)
@@ -132,7 +136,8 @@ def submit_mp4_query(geo_json,
 
     res = final_result.delay()  # Removed 1 minute from now
 
-    resulting_task_uuids = [{'uuid': r.id} for r in res.children]
+    resulting_task_uuids = [
+        {'uuid': r.id, 'api_version': API_VERSION} for r in res.children]
 
     return resulting_task_uuids
 
@@ -166,7 +171,7 @@ def submit_nc_query(geo_json,
         [do_netcdf.s(geo_json, start, finish, model) for model in models])
 
     res = final_result.delay()  # Removed 1 minute from now
-    return [{'uuid': r.id} for r in res.children]
+    return [{'uuid': r.id, 'api_version': API_VERSION} for r in res.children]
 
 
 #############
@@ -179,6 +184,8 @@ def submit_nc_query(geo_json,
 def result(uuid):
     res = AsyncResult(uuid, app=app)
     if res.state == 'SUCCESS':
+        resp = res.get()
+        resp['api_version'] = API_VERSION
         return res.get()
 
 
@@ -197,7 +204,7 @@ def submit_query(geo_json,
         [do_query.s(geo_json, start, finish, model) for model in models])
 
     res = final_result.delay()  # Removed 1 minute from now
-    return [{'uuid': r.id} for r in res.children]
+    return [{'uuid': r.id, 'api_version': API_VERSION} for r in res.children]
 
 
 @hug.get('/progress.json', versions=1)
@@ -207,18 +214,21 @@ def get_progress(uuid):
     if not res.ready():
         o = {
             'id': res.id,
-            'STATE': res.state  # PENDING, STARTED, RETRY, FAILURE, SUCCESS
+            'STATE': res.state,  # PENDING, STARTED, RETRY, FAILURE, SUCCESS
+            'api_version': API_VERSION
         }
     else:
         if res.successful():
             o = {
                 'id': res.id,
-                'STATE': res.state  # PENDING, STARTED, RETRY, FAILURE, SUCCESS
+                'STATE': res.state,  # PENDING, STARTED, RETRY, FAILURE, SUCCESS
+                'api_version': API_VERSION
             }
         else:
             o = {
                 'id': res.id,
                 'STATE': res.state,  # PENDING, STARTED, RETRY, FAILURE, SUCCESS
+                'api_version': API_VERSION,
                 'error': res.traceback
             }
     return o
@@ -293,7 +303,8 @@ def handle_exception(exception):
     traceback.print_exception(exc_type, exc_value, exc_traceback,
                               limit=2, file=output)
 
-    message = {'code': 500, 'error': '{}'.format(output.getvalue())}
+    message = {'code': 500, 'error': '{}'.format(
+        output.getvalue()), 'api_version': API_VERSION}
     output.close()
     return message
 
