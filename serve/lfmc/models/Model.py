@@ -61,7 +61,7 @@ class Model:
 
         ok = Path(self.netcdf_name_for_date(when)).is_file()
         logger.debug("\n--> Checking for existence of NetCDF @ %s for %s: %s" %
-              (file_path, when.strftime("%d %m %Y"), ok))
+                     (file_path, when.strftime("%d %m %Y"), ok))
 
         # TODO -if OK put the file into Swift Storage
 
@@ -70,7 +70,8 @@ class Model:
     @staticmethod
     async def do_download(url, resource, path):
         uri = url + resource
-        logger.debug("\n> Downloading...\n--> Retrieving: {} \n--> Saving to: {}\n".format(uri, str(path)))
+        logger.debug(
+            "\n> Downloading...\n--> Retrieving: {} \n--> Saving to: {}\n".format(uri, str(path)))
 
         try:
             p = subprocess.run(
@@ -105,11 +106,11 @@ class Model:
 
         except FileNotFoundError as e:
             logger.debug("\n--> Expanding: %s, failed.\n%s" %
-                  (archive_file, e))
+                         (archive_file, e))
             return False
         except OSError as e:
             logger.debug("\n--> Removing: %s, was not necessary.\n %s" %
-                  (archive_file, e))
+                         (archive_file, e))
         finally:
             logger.debug('Expansion attempt complete.')
         return True
@@ -140,6 +141,64 @@ class Model:
                          minimum=bin_[param].min(),
                          maximum=bin_[param].max(),
                          deviation=bin_[param].std())
+
+    async def get_shaped_timeseries(self, query: ShapeQuery) -> pd.DataFrame:
+        logger.debug(
+            "\n--->>> Shape Query Called successfully on %s Model!! <<<---" % self.name)
+        sr = await (self.get_shaped_resultcube(query))
+        sr.load()
+        var = self.outputs['readings']['prefix']
+
+        try:
+            logger.debug('Trying to find datapoints.')
+
+            geoQ = GeoQuery(query)
+            df = geoQ.cast_fishnet({'init': 'EPSG:4326'}, sr[var])
+
+        except FileNotFoundError:
+            logger.debug('Files not found for date range.')
+        except ValueError as ve:
+            logger.debug(ve)
+        except OSError as oe:
+            logger.debug(oe)
+
+        if len(df) == 0:
+            logger.debug('Found no datapoints.')
+            logger.debug(sr)
+
+        asyncio.sleep(1)
+        return df
+
+    async def get_timeseries_results(self, query: ShapeQuery) -> ModelResult:
+        df = await (self.get_shaped_timeseries(query))
+        geoQ = GeoQuery(query)
+        dps = geoQ.pull_fishnet(df)
+        return ModelResult(model_name=self.name, data_points=dps)
+
+    async def get_shapefile_results(self, sq: ShapeQuery):
+        df = await (self.get_shaped_timeseries(sq))
+        stored_shp = '/FuelModels/queries/' + str(uuid4()) + '.nc'
+        df.to_file(driver='ESRI Shapefile', filename=stored_shp)
+        return stored_shp
+
+    async def get_netcdf_results(self, sq: ShapeQuery):
+        df = await (self.get_shaped_resultcube(sq))
+        logger.debug(df)
+        stored_nc = '/FuelModels/queries/' + str(uuid4()) + '.nc'
+        df.to_netcdf(stored_nc, format='NETCDF4')
+        return stored_nc
+
+    async def get_mp4_results(self, sq: ShapeQuery):
+        sr = await (self.get_shaped_resultcube(sq))
+        logger.debug(sr)
+        mp4ormatter = MPEGFormatter()
+        mp4 = await (mp4ormatter.format(
+            sr, self.outputs["readings"]["prefix"]))
+
+        logger.debug(mp4)
+
+        asyncio.sleep(1)
+        return mp4  # Parsed from dictionary results
 
     pass
 
