@@ -478,7 +478,7 @@ class DeadFuelModel(Model):
     async def get_netcdf_results(self, sq: ShapeQuery):
         df = await (self.get_shaped_resultcube(sq))
         stored_nc = '/FuelModels/queries/' + str(uuid4()) + '.nc'
-        df.to_xarray().to_netcdf(stored_nc)
+        df.to_netcdf(stored_nc, format='NETCDF4')
         return stored_nc
 
     async def get_mp4_results(self, sq: ShapeQuery):

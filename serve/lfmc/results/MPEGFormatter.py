@@ -1,3 +1,4 @@
+import logging
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import pandas as pd
@@ -5,6 +6,11 @@ from uuid import uuid4
 import asyncio
 
 plt.switch_backend('agg')
+
+logging.basicConfig()
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+logger.debug("logger set to DEBUG")
 
 
 class MPEGFormatter:
