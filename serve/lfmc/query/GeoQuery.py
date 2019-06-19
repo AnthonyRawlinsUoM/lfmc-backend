@@ -172,7 +172,7 @@ class GeoQuery(ShapeQuery):
             if len(data) > 0:
                 # Create a dataframe of the results
                 results = pd.DataFrame(
-                    data, columns=['moisture_content', 'weight', 'geometry'])
+                    data, columns=['time', 'moisture_content', 'weight', 'geometry'])
 
                 moisture = results[['moisture_content']].values
 
