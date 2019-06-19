@@ -1,0 +1,1 @@
+{"code": 500, "error": "Traceback (most recent call last):\n  File \"hug/interface.py\", line 766, in hug.interface.HTTP.__call__\n  File \"hug/interface.py\", line 714, in hug.interface.HTTP.render_content\nTypeError: stat: path should be string, bytes, os.PathLike or integer, not list\n"}

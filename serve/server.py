@@ -116,8 +116,8 @@ def result_mpg(uuid):
         return res.get()
 
 
-@hug.get('/submit_query.mp4', versions=1, output=suffix_output)
-@hug.post('/submit_query.mp4', versions=1, output=suffix_output)
+@hug.get('/submit_query.mp4', versions=1, output=hug.output_format.pretty_json)
+@hug.post('/submit_query.mp4', versions=1, output=hug.output_format.pretty_json)
 def submit_mp4_query(geo_json,
                      start: fields.String(),
                      finish: fields.String(),
@@ -150,8 +150,8 @@ def result_netcdf(uuid):
         return res.get()
 
 
-@hug.get('/submit_query.nc', versions=1, output=suffix_output)
-@hug.post('/submit_query.nc', versions=1, output=suffix_output)
+@hug.get('/submit_query.nc', versions=1, output=hug.output_format.pretty_json)
+@hug.post('/submit_query.nc', versions=1, output=hug.output_format.pretty_json)
 def submit_nc_query(geo_json,
                     start: fields.String(),
                     finish: fields.String(),

@@ -473,13 +473,13 @@ class DeadFuelModel(Model):
         df = await (self.get_shaped_timeseries(sq))
         stored_shp = '/FuelModels/queries/' + str(uuid4()) + '.nc'
         df.to_file(driver='ESRI Shapefile', filename=stored_shp)
-        return {'download': stored_shp}
+        return stored_shp
 
     async def get_netcdf_results(self, sq: ShapeQuery):
         df = await (self.get_shaped_resultcube(sq))
         stored_nc = '/FuelModels/queries/' + str(uuid4()) + '.nc'
         df.to_netcdf(stored_nc)
-        return {'download': stored_nc}
+        return stored_nc
 
     async def get_mp4_results(self, sq: ShapeQuery):
         sr = await (self.get_shaped_resultcube(sq))
