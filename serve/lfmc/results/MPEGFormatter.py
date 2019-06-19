@@ -4,6 +4,8 @@ import pandas as pd
 from uuid import uuid4
 import asyncio
 
+plt.switch_backend('agg')
+
 
 class MPEGFormatter:
 
