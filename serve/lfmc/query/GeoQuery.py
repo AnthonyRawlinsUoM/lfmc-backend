@@ -39,7 +39,7 @@ class GeoQuery(ShapeQuery):
 
     def __init__(self, query):
         self.query = query
-        seld.idx = None
+        self.idx = None
 
     def build_index(self, grids):
         self.idx = index.Index()
