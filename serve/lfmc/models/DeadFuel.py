@@ -209,11 +209,11 @@ class DeadFuelModel(Model):
                     sr = ds
                 logger.debug(sr)
 
-                lat1, lon1, lat2, lon2 = shape_query.query.spatial.expanded(
+                lat1, lon1, lat2, lon2 = shape_query.spatial.expanded(
                     0.1)
 
-                start = shape_query.query.temporal.start.strftime("%Y-%m-%d")
-                finish = shape_query.query.temporal.finish.strftime("%Y-%m-%d")
+                start = shape_query.temporal.start.strftime("%Y-%m-%d")
+                finish = shape_query.temporal.finish.strftime("%Y-%m-%d")
 
                 sr = sr.sel(time=slice(start, finish), latitude=slice(
                     lat1, lat2), longitude=slice(lon1, lon2), drop=True)
@@ -519,14 +519,14 @@ class DeadFuelModel(Model):
         return ModelResult(model_name=self.name, data_points=dps)
 
     async def get_shapefile_results(self, sq: ShapeQuery):
-        df = await (self.get_shaped_timeseries(query))
-        stored_shp = '/FuelModels/queries/' + uuid4() + '.nc'
+        df = await (self.get_shaped_timeseries(sq))
+        stored_shp = '/FuelModels/queries/' + str(uuid4()) + '.nc'
         df.to_file(driver='ESRI Shapefile', filename=stored_shp)
         return {'download': stored_shp}
 
     async def get_netcdf_results(self, sq: ShapeQuery):
         df = await (self.get_shaped_resultcube(query))
-        stored_nc = '/FuelModels/queries/' + uuid4() + '.nc'
+        stored_nc = '/FuelModels/queries/' + str(uuid4()) + '.nc'
         df.to_netcdf(stored_nc)
         return {'download': stored_nc}
 
@@ -538,5 +538,8 @@ class DeadFuelModel(Model):
 
         mp4 = await (MPEGFormatter.format(
             sr, self.outputs["readings"]["prefix"]))
+
+        logger.debug(mp4)
+
         asyncio.sleep(1)
         return mp4['download']  # Parsed from dictionary results
