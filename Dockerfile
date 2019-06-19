@@ -36,7 +36,7 @@ WORKDIR /home/dockeruser
 RUN chown 1000:1000 /FuelModels
 ADD .netrc /home/dockeruser/.netrc
 ADD serve /home/dockeruser/serve
-COPY ./VERSION /home/dockeruser/serve
+COPY ./VERSION /home/dockeruser/VERSION
 USER 1000
 
 EXPOSE 8002
