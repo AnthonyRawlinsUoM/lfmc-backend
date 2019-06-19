@@ -476,13 +476,13 @@ class DeadFuelModel(Model):
         return {'download': stored_shp}
 
     async def get_netcdf_results(self, sq: ShapeQuery):
-        df = await (self.get_shaped_resultcube(query))
+        df = await (self.get_shaped_resultcube(sq))
         stored_nc = '/FuelModels/queries/' + str(uuid4()) + '.nc'
         df.to_netcdf(stored_nc)
         return {'download': stored_nc}
 
-    async def get_mp4_results(self, query: ShapeQuery):
-        sr = await (self.get_shaped_resultcube(query))
+    async def get_mp4_results(self, sq: ShapeQuery):
+        sr = await (self.get_shaped_resultcube(sq))
         logger.debug(sr)
         mp4ormatter = MPEGFormatter()
         mp4 = await (mp4ormatter.format(
