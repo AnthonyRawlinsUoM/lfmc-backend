@@ -172,9 +172,9 @@ class Model:
         return df
 
     async def get_timeseries_results(self, query: ShapeQuery) -> ModelResult:
-        df = await (self.get_shaped_timeseries(query))
-        geoQ = GeoQuery(query)
-        dps = geoQ.pull_fishnet(df)
+        dps = await (self.get_shaped_timeseries(query))
+        # geoQ = GeoQuery(query)
+        # dps = geoQ.pull_fishnet(df)
         return ModelResult(model_name=self.name, data_points=dps)
 
     async def get_shapefile_results(self, sq: ShapeQuery):
