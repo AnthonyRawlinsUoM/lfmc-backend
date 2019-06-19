@@ -39,9 +39,9 @@ app.Task.resultrepr_maxsize = 2000
 def do_netcdf(geo_json, start, finish, model):
     result = {}
     try:
-        sq = GeoQuery(geo_json=geo_json,
-                      start=start,
-                      finish=finish)
+        sq = ShapeQuery(geo_json=geo_json,
+                        start=start,
+                        finish=finish)
         mr = ModelRegister()
         model = mr.get(model)
 
@@ -65,9 +65,9 @@ def do_netcdf(geo_json, start, finish, model):
 def do_mp4(geo_json, start, finish, model):
     result = {}
     try:
-        sq = GeoQuery(geo_json=geo_json,
-                      start=start,
-                      finish=finish)
+        sq = ShapeQuery(geo_json=geo_json,
+                        start=start,
+                        finish=finish)
         mr = ModelRegister()
         model = mr.get(model)
 
@@ -93,9 +93,9 @@ def do_mp4(geo_json, start, finish, model):
 def do_query(geo_json, start, finish, model):
     result = {}
     try:
-        sq = GeoQuery(geo_json=geo_json,
-                      start=start,
-                      finish=finish)
+        sq = ShapeQuery(geo_json=geo_json,
+                        start=start,
+                        finish=finish)
         mr = ModelRegister()
         model = mr.get(model)
 
