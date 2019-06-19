@@ -372,14 +372,14 @@ class DeadFuelModel(Model):
             if not file_path.is_dir():
                 os.makedirs(file_path)
 
-            parameter_dataset_name = file_path.joinpath(param['prefix'] + "_"
-                                                        + param['dataset'])
+            parameter_dataset_name = file_path.joinpath(param['prefix'] + "_" +
+                                                        param['dataset'])
             if parameter_dataset_name.is_file():
                 return parameter_dataset_name
             else:
-                data_file = file_path.joinpath(param['prefix'] + "_"
-                                              + when.strftime("%Y%m%d")
-                                               + param['suffix'])
+                data_file = file_path.joinpath(param['prefix'] + "_" +
+                                              when.strftime("%Y%m%d") +
+                                               param['suffix'])
 
                 logger.debug(data_file)
 
@@ -444,61 +444,3 @@ class DeadFuelModel(Model):
         es = 0.6108 * np.exp(17.27 * t / (t + 237.3))
         d = np.clip(ea - es, None, 0)
         return 6.79 + (27.43 * np.exp(1.05 * d))
-
-    async def get_shaped_timeseries(self, query: ShapeQuery) -> pd.DataFrame:
-        logger.debug(
-            "\n--->>> Shape Query Called successfully on %s Model!! <<<---" % self.name)
-        sr = await (self.get_shaped_resultcube(query))
-        sr.load()
-        var = self.outputs['readings']['prefix']
-
-        try:
-            logger.debug('Trying to find datapoints.')
-
-            geoQ = GeoQuery(query)
-            df = geoQ.cast_fishnet({'init': 'EPSG:4326'}, sr[var])
-
-        except FileNotFoundError:
-            logger.debug('Files not found for date range.')
-        except ValueError as ve:
-            logger.debug(ve)
-        except OSError as oe:
-            logger.debug(oe)
-
-        if len(df) == 0:
-            logger.debug('Found no datapoints.')
-            logger.debug(sr)
-
-        asyncio.sleep(1)
-        return df
-
-    async def get_timeseries_results(self, query: ShapeQuery) -> ModelResult:
-        df = await (self.get_shaped_timeseries(query))
-        geoQ = GeoQuery(query)
-        dps = geoQ.pull_fishnet(df)
-        return ModelResult(model_name=self.name, data_points=dps)
-
-    async def get_shapefile_results(self, sq: ShapeQuery):
-        df = await (self.get_shaped_timeseries(sq))
-        stored_shp = '/FuelModels/queries/' + str(uuid4()) + '.nc'
-        df.to_file(driver='ESRI Shapefile', filename=stored_shp)
-        return stored_shp
-
-    async def get_netcdf_results(self, sq: ShapeQuery):
-        df = await (self.get_shaped_resultcube(sq))
-        logger.debug(df)
-        stored_nc = '/FuelModels/queries/' + str(uuid4()) + '.nc'
-        df.to_netcdf(stored_nc, format='NETCDF4')
-        return stored_nc
-
-    async def get_mp4_results(self, sq: ShapeQuery):
-        sr = await (self.get_shaped_resultcube(sq))
-        logger.debug(sr)
-        mp4ormatter = MPEGFormatter()
-        mp4 = await (mp4ormatter.format(
-            sr, self.outputs["readings"]["prefix"]))
-
-        logger.debug(mp4)
-
-        asyncio.sleep(1)
-        return mp4  # Parsed from dictionary results
