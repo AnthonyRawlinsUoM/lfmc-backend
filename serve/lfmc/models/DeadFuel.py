@@ -484,8 +484,8 @@ class DeadFuelModel(Model):
     async def get_mp4_results(self, query: ShapeQuery):
         sr = await (self.get_shaped_resultcube(query))
         logger.debug(sr)
-
-        mp4 = await (MPEGFormatter.format(
+        mp4ormatter = MPEGFormatter()
+        mp4 = await (mp4ormatter.format(
             sr, self.outputs["readings"]["prefix"]))
 
         logger.debug(mp4)
