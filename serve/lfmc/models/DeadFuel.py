@@ -212,31 +212,21 @@ class DeadFuelModel(Model):
                 lat1, lon1, lat2, lon2 = shape_query.spatial.expanded(
                     0.1)
 
-                print("lat1: %s" % lat1)
-                print("lon1: %s" % lon1)
-                print("lat2: %s" % lat2)
-                print("lon2: %s" % lon2)
-
-                logger.debug("lat1: %s" % lat1)
-                logger.debug("lon1: %s" % lon1)
-                logger.debug("lat2: %s" % lat2)
-                logger.debug("lon2: %s" % lon2)
-
                 start = shape_query.temporal.start.strftime("%Y-%m-%d")
                 finish = shape_query.temporal.finish.strftime("%Y-%m-%d")
 
-                sr = sr.sel(time=slice(start, finish), latitude=slice(
-                    lat1, lat2), longitude=slice(lon1, lon2), drop=True)
+                sr1 = sr.sel(time=slice(start, finish), latitude=slice(
+                    lat1, lat2), longitude=slice(lon1, lon2))
 
-                logger.debug(sr)
+                logger.debug(sr1)
 
-                # reverse lat1 & lat2 because of southern hemisphere negative values?
-                sr2 = sr.sel(time=slice(start, finish), latitude=slice(
-                    lat2, lat1), longitude=slice(lon1, lon2), drop=True)
+                # # reverse lat1 & lat2 because of southern hemisphere negative values?
+                # sr2 = sr['DFMC'].sel(time=slice(start, finish), latitude=slice(
+                #     lat2, lat1), longitude=slice(lon1, lon2))
 
-                logger.debug(sr2)
+                # logger.debug(sr2)
 
-            return sr
+            return sr1
         else:
             logger.debug("No files available/gathered for that space/time.")
             return xr.DataArray([])
@@ -264,7 +254,7 @@ class DeadFuelModel(Model):
                 ds['time'].attrs['name'] = 'time'
                 ds['time'].attrs['standard_name'] = 'time'
 
-                ds['DFMC'].attrs['units'] = 'fullness'
+                ds['DFMC'].attrs['units'] = 'z-scores'
                 ds['DFMC'].attrs[
                     'long_name'] = 'Dead Fine Fuels Moisture Content - (Percentage wet over dry by weight)'
                 ds['DFMC'].attrs['name'] = self.outputs['readings']['prefix']
@@ -343,7 +333,7 @@ class DeadFuelModel(Model):
 
             with xr.open_mfdataset(tempfile) as combined:
                 # DFMC.coords['time'] = [dt.datetime(int(y), int(m), int(d))]
-                combined['DFMC'].attrs['DFMC:units'] = "Percentage wet over dry by weight."
+                # combined['DFMC'].attrs['DFMC:units'] = "z-scores"
                 combined['DFMC'].attrs['long_name'] = "Dead Fuel Moisture Content"
                 combined['DFMC'].attrs['time:units'] = "Days since %s-%s-%s 00:00:00" % (
                     y, m, d)
@@ -381,14 +371,14 @@ class DeadFuelModel(Model):
             if not file_path.is_dir():
                 os.makedirs(file_path)
 
-            parameter_dataset_name = file_path.joinpath(param['prefix'] + "_"
-                                                        + param['dataset'])
+            parameter_dataset_name = file_path.joinpath(param['prefix'] + "_" +
+                                                        param['dataset'])
             if parameter_dataset_name.is_file():
                 return parameter_dataset_name
             else:
-                data_file = file_path.joinpath(param['prefix'] + "_"
-                                              + when.strftime("%Y%m%d")
-                                               + param['suffix'])
+                data_file = file_path.joinpath(param['prefix'] + "_" +
+                                              when.strftime("%Y%m%d") +
+                                               param['suffix'])
 
                 logger.debug(data_file)
 
