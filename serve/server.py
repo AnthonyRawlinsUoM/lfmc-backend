@@ -112,6 +112,7 @@ def model_codes():
 def result_mpg(uuid):
     res = AsyncResult(uuid, app=app)
     if res.state == 'SUCCESS':
+        logger.debug(res)
         return res.get()
 
 
