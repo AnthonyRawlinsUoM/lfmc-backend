@@ -16,7 +16,8 @@ from marshmallow import Schema, fields
 from pathlib2 import Path
 
 from serve.lfmc.models.ModelMetaData import ModelMetaDataSchema
-from serve.lfmc.query import ShapeQuery
+from serve.lfmc.query.ShapeQuery import ShapeQuery
+from serve.lfmc.query.GeoQuery import GeoQuery
 from serve.lfmc.results.DataPoint import DataPoint
 from serve.lfmc.results.ModelResult import ModelResult
 import logging
