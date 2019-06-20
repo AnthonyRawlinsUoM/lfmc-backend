@@ -201,6 +201,8 @@ class BomBasedModel(Model):
             self.archive_name("*")) if Path(f).is_file()]
         return archives
 
+
+"""
     async def get_shaped_timeseries(self, query: ShapeQuery):
         logger.debug(
             "\n--->>> Shape Query Called successfully on %s Model!! <<<---" % self.name)
@@ -233,3 +235,4 @@ class BomBasedModel(Model):
         df = await (self.get_shaped_resultcube(query))
         geoQ = GeoQuery(query)
         return ModelResult(model_name=self.name, data_points=geoQ.pull_fishnet(df))
+"""
