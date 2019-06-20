@@ -217,9 +217,8 @@ class GeoQuery(ShapeQuery):
             dps = []
             logger.debug('Type of final_stats is: %s' % type(final_stats))
             logger.debug(tabulate(final_stats))
-            logger.debug(final_stats.to_dataframe())
 
-            for row in final_stats.to_dataframe().itertuples(index=True, name='Pandas'):
+            for row in final_stats.itertuples(index=True, name='Pandas'):
                 # logger.debug(row.Index.isoformat().replace('.000000000', '.000Z'))
                 dps.append(DataPoint(observation_time=row.Index.isoformat() + '.000Z',
                                      value=row.median_mc,
