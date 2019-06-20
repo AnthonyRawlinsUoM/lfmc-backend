@@ -104,7 +104,7 @@ class JasminModel(Model):
 
     # ShapeQuery
     async def get_shaped_resultcube(self, shape_query: ShapeQuery) -> xr.DataArray:
-
+        logger.debug('Using local Models implementation of resultcube!')
         sr = None
         fs = list(set(self.netcdf_names_for_dates(
             shape_query.temporal.start, shape_query.temporal.finish)))
@@ -142,33 +142,3 @@ class JasminModel(Model):
             return sr
         else:
             return xr.DataArray([])
-
-    async def get_shaped_timeseries(self, query: ShapeQuery) -> ModelResult:
-        logger.debug(
-            "\n--->>> Shape Query Called successfully on %s Model!! <<<---" % self.name)
-        sr = await (self.get_shaped_resultcube(query))
-        sr.load()
-        var = self.outputs['readings']['prefix']
-        dps = []
-        try:
-            logger.debug('Trying to find datapoints.')
-            geoQ = GeoQuery(query)
-            dps = geoQ.cast_fishnet({'init': 'EPSG:4326'}, sr[var])
-            logger.debug(dps)
-
-        except FileNotFoundError:
-            logger.debug('Files not found for date range.')
-        except ValueError as ve:
-            logger.debug(ve)
-        except OSError as oe:
-            logger.debug(oe)
-        except KeyError as ke:
-            logger.debug(ke)
-
-        if len(dps) == 0:
-            logger.debug('Found no datapoints.')
-            logger.debug(sr)
-
-        asyncio.sleep(1)
-
-        return ModelResult(model_name=self.name, data_points=dps)

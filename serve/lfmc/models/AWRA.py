@@ -91,31 +91,3 @@ class AWRAModel(Model):
         # if dev.DEBUG:
         #     logger.debug(ts)
         return ts
-
-    async def get_shaped_timeseries(self, query: ShapeQuery) -> ModelResult:
-        logger.debug(
-            "\n--->>> Shape Query Called successfully on %s Model!! <<<---" % self.name)
-        sr = await (self.get_shaped_resultcube(query))
-        sr.load()
-        var = self.outputs['readings']['prefix']
-        dps = []
-        try:
-            logger.debug('Trying to find datapoints.')
-
-            geoQ = GeoQuery(query)
-            dps = geoQ.cast_fishnet({'init': 'EPSG:3111'}, sr[var])
-            logger.debug(dps)
-        except FileNotFoundError:
-            logger.debug('Files not found for date range.')
-        except ValueError as ve:
-            logger.debug(ve)
-        except OSError as oe:
-            logger.debug(oe)
-
-        if len(dps) == 0:
-            logger.debug('Found no datapoints.')
-            logger.debug(sr)
-
-        asyncio.sleep(1)
-
-        return ModelResult(model_name=self.name, data_points=dps)
