@@ -207,28 +207,28 @@ class GeoQuery(ShapeQuery):
                         shape_stats.append((t, area_weighted_average_mc,
                                             mean_mc, min_mc, max_mc, std_mc, median_mc, count_mc))
 
-            logger.debug('Done gathering stats over time.')
-            final_stats = pd.DataFrame(shape_stats, columns=[
-                                       'time', 'area_weighted_average_mc', 'mean_mc', 'min_mc', 'max_mc', 'std_mc', 'median_mc', 'count_mc'])
-            final_stats.set_index('time', inplace=True)
+        logger.debug('Done gathering stats over time.')
+        final_stats = pd.DataFrame(shape_stats, columns=[
+                                   'time', 'area_weighted_average_mc', 'mean_mc', 'min_mc', 'max_mc', 'std_mc', 'median_mc', 'count_mc'])
+        final_stats.set_index('time', inplace=True)
 
-            logger.debug(tabulate(final_stats))
+        logger.debug(tabulate(final_stats))
 
-            dps = []
-            logger.debug('Type of final_stats is: %s' % type(final_stats))
-            logger.debug(tabulate(final_stats))
+        dps = []
+        logger.debug('Type of final_stats is: %s' % type(final_stats))
+        logger.debug(tabulate(final_stats))
 
-            for row in final_stats.itertuples(index=True, name='Pandas'):
-                # logger.debug(row.Index.isoformat().replace('.000000000', '.000Z'))
-                dps.append(DataPoint(observation_time=row.Index.isoformat() + '.000Z',
-                                     value=row.median_mc,
-                                     mean=row.mean_mc,
-                                     weighted_mean=row.area_weighted_average_mc,
-                                     minimum=row.min_mc,
-                                     maximum=row.max_mc,
-                                     deviation=row.std_mc,
-                                     median=row.median_mc,
-                                     count=row.count_mc))
+        for row in final_stats.itertuples(index=True, name='Pandas'):
+            # logger.debug(row.Index.isoformat().replace('.000000000', '.000Z'))
+            dps.append(DataPoint(observation_time=row.Index.isoformat() + '.000Z',
+                                 value=row.median_mc,
+                                 mean=row.mean_mc,
+                                 weighted_mean=row.area_weighted_average_mc,
+                                 minimum=row.min_mc,
+                                 maximum=row.max_mc,
+                                 deviation=row.std_mc,
+                                 median=row.median_mc,
+                                 count=row.count_mc))
         return dps
 
         # This would be much better as a GeoDataFrame and export to JSON using __geo_interface__
