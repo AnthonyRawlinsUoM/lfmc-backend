@@ -20,6 +20,7 @@ from serve.lfmc.query.ShapeQuery import ShapeQuery
 from serve.lfmc.query.GeoQuery import GeoQuery
 from serve.lfmc.results.DataPoint import DataPoint
 from serve.lfmc.results.ModelResult import ModelResult
+from serve.lfmc.results.MPEGFormatter import MPEGFormatter
 import logging
 logging.basicConfig()
 logger = logging.getLogger(__name__)
