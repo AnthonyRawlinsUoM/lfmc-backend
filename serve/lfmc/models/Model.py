@@ -177,6 +177,7 @@ class Model:
         dps = await (self.get_shaped_timeseries(query))
         # geoQ = GeoQuery(query)
         # dps = geoQ.pull_fishnet(df)
+        logger.debug('Got here with %s data points.' % (len(dps)))
         return ModelResult(model_name=self.name, data_points=dps)
 
     async def get_shapefile_results(self, sq: ShapeQuery):
