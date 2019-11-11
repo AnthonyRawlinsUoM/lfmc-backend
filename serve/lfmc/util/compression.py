@@ -1,6 +1,12 @@
 import subprocess
 import os
 from pathlib import Path
+import logging
+
+logging.basicConfig()
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+logger.debug("logger set to DEBUG")
 
 
 def expand_in_place(file_list, auto_remove=True):
@@ -24,11 +30,11 @@ def expand_in_place(file_list, auto_remove=True):
 
             except FileNotFoundError as e:
                 logger.debug("\n--> Expanding: %s, failed.\n%s" %
-                      (archive_file, e))
+                             (archive_file, e))
                 return False
             except OSError as e:
                 logger.debug("\n--> Removing: %s, was not necessary.\n %s" %
-                      (archive_file, e))
+                             (archive_file, e))
             return True
         else:
             if auto_remove:

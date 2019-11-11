@@ -1,23 +1,15 @@
 from __future__ import absolute_import, unicode_literals
 
-from celery import group
-from celery import task
 from celery import Celery
 
 from serve.lfmc.query.ShapeQuery import ShapeQuery
-from serve.lfmc.query.GeoQuery import GeoQuery
 from serve.lfmc.models.ModelRegister import ModelRegister
-from serve.lfmc.results.ModelResult import ModelResult
-from serve.lfmc.results.MPEGFormatter import MPEGFormatter
 from serve.lfmc.results.ModelResult import ModelResultSchema
 from serve.lfmc.process.Conversion import Conversion
 
-import time
 import json
 import asyncio
 import logging
-import base64
-import marshmallow
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
@@ -104,7 +96,7 @@ def do_query(geo_json, start, finish, model):
             model.get_timeseries_results(sq))
     except ValueError as e:
         logger.error("ValueError")
-        # result['error'] = json.dumps(e)
+        result['error'] = json.dumps(e)
 
     mrs = ModelResultSchema()
     json_result, errors = mrs.dump(result)
@@ -113,6 +105,7 @@ def do_query(geo_json, start, finish, model):
 
 @app.task(trail=True)
 def consolidate(year):
+    """ Only required for DFMC model """
     mr = ModelRegister()
     model = mr.get('DFMC')
     looped = asyncio.new_event_loop()
@@ -132,5 +125,3 @@ def do_conversion(shp):
     c = Conversion()
     return c.convert_this(shp)
 
-# if __name__ == '__main__':
-#     ModelFacade.create_models()

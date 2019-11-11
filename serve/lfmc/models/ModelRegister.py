@@ -1,41 +1,24 @@
-import asyncio
-import datetime as dt
-
-import requests
-import rx
 from marshmallow import fields, Schema
-from rx import Observable
-from serve.lfmc.config import debug as dev
-
-from serve.lfmc.library.GeoServer import GeoServer
-from serve.lfmc.library.geoserver.catalog import FailedRequestError, UploadError
-from serve.lfmc.library.geoserver.support import DimensionInfo
-
-from serve.lfmc.models.ModelAdaptor import ModelAdaptor
-
-from serve.lfmc.models.Curing import CuringModel
-from serve.lfmc.models.JASMIN import JasminModel
-from serve.lfmc.models.LiveFuel import LiveFuelModel
-from serve.lfmc.models.Model import Model, ModelSchema
-from serve.lfmc.models.DeadFuel import DeadFuelModel
-from serve.lfmc.models.FFDI import FFDIModel
-from serve.lfmc.models.KBDI import KBDIModel
-from serve.lfmc.models.GFDI import GFDIModel
-from serve.lfmc.models.AWRAroot import AWRAModelRoot
-from serve.lfmc.models.AWRAlower import AWRAModelLower
-from serve.lfmc.models.AWRAupper import AWRAModelUpper
-from serve.lfmc.models.DF import DFModel
-from serve.lfmc.models.Temp import TempModel
-from serve.lfmc.models.RelativeHumidity import RHModel
-# from serve.lfmc.models.Matthews import Matthews
-from serve.lfmc.models.Yebra import YebraModel
-
-from serve.lfmc.process.ProcessQueue import ProcessQueue
-from serve.lfmc.query import ShapeQuery
-from serve.lfmc.results.DataPoint import DataPoint
-from serve.lfmc.results.ModelResult import ModelResult
 
 import logging
+
+from marshmallow import fields, Schema
+
+from serve.lfmc.library.GeoServer import GeoServer
+from serve.lfmc.models.AWRAlower import AWRAModelLower
+from serve.lfmc.models.AWRAroot import AWRAModelRoot
+from serve.lfmc.models.AWRAupper import AWRAModelUpper
+from serve.lfmc.models.Curing import CuringModel
+from serve.lfmc.models.DF import DFModel
+from serve.lfmc.models.DeadFuel import DeadFuelModel
+from serve.lfmc.models.FFDI import FFDIModel
+from serve.lfmc.models.GFDI import GFDIModel
+from serve.lfmc.models.JASMIN import JasminModel
+from serve.lfmc.models.KBDI import KBDIModel
+from serve.lfmc.models.LiveFuel import LiveFuelModel
+from serve.lfmc.models.Model import ModelSchema
+from serve.lfmc.models.Yebra import YebraModel
+
 logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -178,11 +161,11 @@ class ModelRegister:
     def get(self, model_name):
         logger.debug(model_name)
         for m in self.models:
-            if m.name == model_name:
+            if str(m.name).upper() == str(model_name).upper():
                 return m
-            if m.code == model_name:
+            if str(m.code).upper() == str(model_name).upper():
                 return m
-            if m.ident == model_name:
+            if str(m.ident).upper() == str(model_name).upper():
                 return m
         return None
 

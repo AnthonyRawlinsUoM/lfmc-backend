@@ -125,7 +125,7 @@ class JasminModel(Model):
 
             # Workaround for Bug - Daylight Savings time (double daily entry bug)
             ds = None
-            for t in sorted(list(set(sorted(sr.sm.time.values)))):
+            for t in sorted(list(set(sorted(sr.time.values)))):
                 a = sr.sel(time=t)
                 if 'time' in a.dims:
                     a = a.isel(time=0)

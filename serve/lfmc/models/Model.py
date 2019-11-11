@@ -152,23 +152,25 @@ class Model:
         sr = await (self.get_shaped_resultcube(query))
         sr.load()
         var = self.outputs['readings']['prefix']
-
+        df = []
         try:
             logger.debug('Trying to find datapoints.')
 
             geoQ = GeoQuery(query)
             df = geoQ.cast_fishnet({'init': 'EPSG:4326'}, sr[var])
+            if len(df) == 0:
+                logger.debug('Found no datapoints!')
+                logger.debug(sr)
 
         except FileNotFoundError:
             logger.debug('Files not found for date range.')
+            pass
         except ValueError as ve:
             logger.debug(ve)
+            pass
         except OSError as oe:
             logger.debug(oe)
-
-        if len(df) == 0:
-            logger.debug('Found no datapoints.')
-            logger.debug(sr)
+            pass
 
         asyncio.sleep(1)
         return df

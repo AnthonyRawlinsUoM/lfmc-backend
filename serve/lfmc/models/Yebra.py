@@ -1,25 +1,20 @@
 import asyncio
+import datetime as dt
 import glob
+import logging
 import os
 import os.path
 from pathlib import Path
 
 import xarray as xr
-import numpy as np
 
+from serve.lfmc.models.Model import Model
+from serve.lfmc.models.ModelMetaData import ModelMetaData
 from serve.lfmc.query import ShapeQuery
-from serve.lfmc.query.GeoQuery import GeoQuery
-from serve.lfmc.results.MPEGFormatter import MPEGFormatter
 from serve.lfmc.results.Abstracts import Abstracts
 from serve.lfmc.results.Author import Author
-import datetime as dt
-from serve.lfmc.models.Model import Model
-from serve.lfmc.results.ModelResult import ModelResult
-from serve.lfmc.models.ModelMetaData import ModelMetaData
-from serve.lfmc.results.DataPoint import DataPoint
-from serve.lfmc.query.SpatioTemporalQuery import SpatioTemporalQuery
+from serve.lfmc.results.MPEGFormatter import MPEGFormatter
 
-import logging
 logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)

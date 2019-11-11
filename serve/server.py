@@ -1,49 +1,27 @@
 #!/usr/bin/env python3
 
-import hug
-import asyncio
-import base64
+import io
+import logging
+import os
+import sys
+import traceback
 from pathlib import Path
-from marshmallow import fields, pprint
-from rx import Observer
-from rx import Observable
 
-from serve.lfmc.models.Model import ModelSchema
+import hug
+from celery import Celery
+from celery import group
+from celery.result import AsyncResult
+from marshmallow import fields
 
-from serve.lfmc.query.ShapeQuery import ShapeQuery
-from serve.lfmc.results import ModelResult
-from serve.lfmc.results.ModelResult import ModelResultSchema
-from serve.lfmc.models.ModelRegister import ModelRegister, ModelsRegisterSchema
-
-from serve.facade import do_query
-from serve.facade import do_netcdf
-from serve.facade import do_mp4
-from serve.facade import log_error
+import serve.lfmc.config.debug as dev
 from serve.facade import consolidate
 from serve.facade import do_conversion
+from serve.facade import do_mp4
+from serve.facade import do_netcdf
+from serve.facade import do_query
+from serve.lfmc.models.Model import ModelSchema
+from serve.lfmc.models.ModelRegister import ModelRegister, ModelsRegisterSchema
 
-import uuid
-import numpy as np
-import pandas as pd
-import xarray as xr
-import geojson
-import json
-
-import os
-import socket
-import sys
-import io
-import traceback
-import logging
-import serve.lfmc.config.debug as dev
-
-from celery.result import AsyncResult, GroupResult, ResultBase
-from celery import group
-from celery import chain
-from celery import chord
-from celery import Celery
-
-import logging
 logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -125,7 +103,8 @@ def result_mpg(uuid):
 def submit_mp4_query(geo_json,
                      start: fields.String(),
                      finish: fields.String(),
-                     models: hug.types.delimited_list(',')):
+                     models: hug.types.delimited_list(',')
+                     ):
     """
     Takes query parameters and returns endpoint where progress/status can be monitored.
     Utilises Partial Chain to use result of ShapeQuery in call signature of 'do_query'.
@@ -200,6 +179,8 @@ def submit_query(geo_json,
     Utilises Partial Chain to use result of ShapeQuery in call signature of 'do_query'.
     HUG then handles formatting the result as a json object.
     """
+    print(models)
+
     final_result = group(
         [do_query.s(geo_json, start, finish, model) for model in models])
 

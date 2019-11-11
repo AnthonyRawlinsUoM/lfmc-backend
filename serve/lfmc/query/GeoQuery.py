@@ -127,8 +127,9 @@ class GeoQuery(ShapeQuery):
                          (grids[pos].intersection(self.query.selections[i]).area / grids[pos].area)]
                         for pos in self.idx.intersection(self.query.selections[i].bounds)]
                        for i in range(0, len(self.query.selections))]
-        except TopologyException as te:
+        except Exception as te:
             logger.error(te.msg)
+            pass
 
         agg_weights = dict()
         agg_bounds = dict()

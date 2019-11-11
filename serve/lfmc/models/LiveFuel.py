@@ -32,7 +32,10 @@ from serve.lfmc.results.Abstracts import Abstracts
 from serve.lfmc.results.Author import Author
 from serve.lfmc.results.DataPoint import DataPoint
 from serve.lfmc.results.ModelResult import ModelResult
+#from serve.lfmc.models.LiveScraper import LiveScraper
+
 import logging
+
 logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -77,6 +80,9 @@ class LiveFuelModel(Model):
                 "suffix": ".nc",
             }
         }
+
+        # self.scraper = LiveScraper(self.path)s
+
 
     def netcdf_name_for_date(self, when):
         return "{}{}_{}{}".format(self.outputs["readings"]["path"],
@@ -232,64 +238,34 @@ class LiveFuelModel(Model):
 
     async def get_shaped_resultcube(self, shape_query: ShapeQuery) -> xr.DataArray:
         sr = None
-        lat1, lon1, lat2, lon2 = shape_query.spatial.expanded(1.0)
+        lat1, lon1, lat2, lon2 = shape_query.spatial.expanded(0.1)
         # logger.debug('BL: %3.3f, %3.3f' % (lon1, lat1))
         # logger.debug('TR: %3.3f, %3.3f' % (lon2, lat2))
         # Eg., "108.0000,-45.0000,155.0000,-10.0000"  # Bottom-left, top-right
         bbox = "%3.3f,%3.3f,%3.3f,%3.3f" % (lon1, lat1, lon2, lat2)
-        # logger.debug("%s" % bbox)
+        logger.debug("BBOX is: %s" % bbox)
 
-        # collection = await self.dataset_files(shape_query.temporal.start, shape_query.temporal.finish, bbox)
+        searcher = ['/FuelModels/Live_FM/LFMC_{}_*.nc'.format(year) for year in list(
+            range(shape_query.temporal.start.year, shape_query.temporal.finish.year + 1))]
 
-        collection = [
-            '/FuelModels/Live_FM/LFMC_2018_h28v12.nc',
-            '/FuelModels/Live_FM/LFMC_2018_h29v12.nc',
-            '/FuelModels/Live_FM/LFMC_2019_h28v12.nc',
-            '/FuelModels/Live_FM/LFMC_2019_h29v12.nc']
+        search_res = []
+        for searching in searcher:
+            [search_res.append(s) for s in glob.glob(searching)]
+
+        collection = list(set(search_res))
 
         logger.debug('Files to open are...')
         logger.debug(collection)
 
-        fs = collection
+        strs = []
 
-        asyncio.sleep(1)
-        if len(fs) > 0:
-            with xr.open_mfdataset(fs) as ds:
-                if "observations" in ds.dims:
-                    sr = ds.squeeze("observations")
-                else:
-                    sr = ds
-            return sr
-        else:
-            logger.debug("No files available/gathered for that space/time.")
-            return xr.DataArray([])
+        for c in collection:
+            ds = xr.open_dataset(c)
+            s_t_r = ds['lfmc'].sel(lat=slice(lat2, lat1), lon=slice(lon1, lon2), time=slice(
+                shape_query.temporal.start, shape_query.temporal.finish))
+            strs.append(s_t_r)
 
-    # async def get_shaped_timeseries(self, query: ShapeQuery) -> ModelResult:
-    #     logger.debug(
-    #         "\n--->>> Shape Query Called successfully on %s Model!! <<<---" % self.name)
-    #     sr = await (self.get_shaped_resultcube(query))
-    #     sr.load()
-    #     var = self.outputs['readings']['prefix']
-    #     dps = []
-    #     try:
-    #         logger.debug('Trying to find datapoints.')
-    #         geoQ = GeoQuery(query)
-    #         dps = geoQ.cast_fishnet({'init': 'EPSG:4326'}, sr[var])
-    #         logger.debug(dps)
-    #
-    #     except FileNotFoundError:
-    #         logger.debug('Files not found for date range.')
-    #     except ValueError as ve:
-    #         logger.debug(ve)
-    #     except OSError as oe:
-    #         logger.debug(oe)
-    #     except KeyError as ke:
-    #         logger.debug(ke)
-    #
-    #     if len(dps) == 0:
-    #         logger.debug('Found no datapoints.')
-    #         logger.debug(sr)
-    #
-    #     asyncio.sleep(1)
-    #
-    #     return ModelResult(model_name=self.name, data_points=dps)
+        dsa = xr.merge(strs)
+        dsa['LFMC'] = dsa['lfmc']
+
+        return dsa

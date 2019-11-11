@@ -271,12 +271,20 @@ class DeadFuelModel(Model):
                                     self.outputs['readings']['prefix'],
                                     str(year))
 
-            temp.to_netcdf(tfile + '.tmp')
+
+
+
             try:
-                os.remove(tfile)
+                os.rename(tfile, tfile + '.tmp')
             except e:
                 logger.error(e)
-            os.rename(tfile + '.tmp', tfile)
+
+            try:
+                ds.to_netcdf(tfile, mode='w', format='NETCDF4')
+                os.remove(tfile + '.tmp')
+            except e:
+                logger.error(e)
+                return false
 
         return True
 
@@ -378,7 +386,7 @@ class DeadFuelModel(Model):
                 return parameter_dataset_name
             else:
                 data_file = file_path.joinpath(param['prefix'] + "_" +
-                                              when.strftime("%Y%m%d") +
+                                               when.strftime("%Y%m%d") +
                                                param['suffix'])
 
                 logger.debug(data_file)
