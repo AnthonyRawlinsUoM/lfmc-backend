@@ -9,16 +9,19 @@ RUN apt-get update
 RUN apt-get install -y build-essential
 RUN apt-get install -y nano
 
-RUN /opt/conda/bin/conda install -y pandas xarray simplejson numpy rasterio opencv
+RUN /opt/conda/bin/conda install -y pandas xarray simplejson numpy rasterio
+#opencv
 
 RUN /opt/conda/bin/pip install hug -U
 RUN /opt/conda/bin/pip install marshmallow python-swiftclient python-keystoneclient
 RUN /opt/conda/bin/pip install netcdf4
 RUN apt-get install -y libgl1-mesa-glx
 RUN apt-get install -y ffmpeg
-RUN /opt/conda/bin/conda install -y geopandas cartopy aiohttp
+RUN /opt/conda/bin/conda install -y geopandas cartopy
+#aiohttp
 RUN /opt/conda/bin/pip install regionmask
-RUN /opt/conda/bin/pip install rx aiohttp_cors
+RUN /opt/conda/bin/pip install rx
+#aiohttp_cors
 RUN /opt/conda/bin/pip install httplib2 geojson
 RUN /opt/conda/bin/pip install tabulate
 RUN /opt/conda/bin/pip install celery
